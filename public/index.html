@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Brazil 2026 Live Count</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="titlebar">
+      <h1>Brazil 2026 · live count</h1>
+      <nav class="tabs" role="tablist">
+        <button role="tab" data-race="president" aria-selected="true">President</button>
+        <button role="tab" data-race="governor" aria-selected="false">Rio de Janeiro Governor</button>
+      </nav>
+      <div class="seg" id="round">
+        <button data-round="1" aria-pressed="true">1st round · 4 Oct</button>
+        <button data-round="2" aria-pressed="false">2nd round · 25 Oct</button>
+      </div>
+    </div>
+    <div class="status">
+      <span id="st-counted" class="big">–</span>
+      <span id="st-times" class="muted"></span>
+      <span class="spacer"></span>
+      <span id="st-badge" class="badge" hidden></span>
+      <span id="st-next" class="muted"></span>
+      <button id="refresh" class="btn">Update now</button>
+    </div>
+    <div class="progress" aria-hidden="true"><div id="progress-fill"></div></div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="card" id="empty" hidden><h2 id="empty-title"></h2><p class="sub" id="empty-text"></p></section>
+  <div id="content">
+  <section class="card">
+    <h2 id="headline">Loading results…</h2>
+    <p class="sub">Share of valid votes. The marker shows the projected final share once the uncounted vote comes in.</p>
+    <div id="cands"></div>
+    <div class="legendline"><span class="mk-proj"></span> projected final <span class="mk-band"></span> range if the remaining vote shifts 3 points either way <span class="mk-50"></span> 50% (first-round win)</div>
+  </section>
+
+  <section class="card">
+    <h2>Where it is heading</h2>
+    <div id="tiles" class="tiles"></div>
+    <p id="heading-note" class="note"></p>
+  </section>
+
+  <div class="grid2">
+    <section class="card">
+      <div class="cardhead">
+        <h2 id="map-title">Map</h2>
+        <div class="seg" id="map-mode">
+          <button data-mode="leader" aria-pressed="true">Leader</button>
+          <button data-mode="counted" aria-pressed="false">% counted</button>
+          <button data-mode="left" aria-pressed="false">Votes left</button>
+          <button data-mode="swing" aria-pressed="false">Swing vs 2022</button>
+        </div>
+      </div>
+      <div id="map"></div>
+      <div id="map-legend" class="legend"></div>
+    </section>
+    <section class="card">
+      <h2>Where the uncounted vote is</h2>
+      <p class="sub">Voters in sections not yet counted, by area. Colour shows who leads there now; the label gives that lead in points.</p>
+      <div id="left"></div>
+    </section>
+  </div>
+
+  <section class="card" id="zones-card" hidden>
+    <h2>Rio de Janeiro city by electoral zone</h2>
+    <p class="sub" id="zones-sub"></p>
+    <div id="zones"></div>
+  </section>
+
+  <section class="card">
+    <div class="cardhead">
+      <h2 id="trend-title">How the count has moved</h2>
+      <div class="seg" id="trend-zoom">
+        <button data-zoom="full" aria-pressed="true">Whole count</button>
+        <button data-zoom="late" aria-pressed="false">From 60%</button>
+      </div>
+    </div>
+    <p id="trend-sub" class="sub"></p>
+    <div id="trend-legend" class="legend"></div>
+    <div id="trend"></div>
+  </section>
+
+  <section class="card">
+    <h2 id="table-title">All areas</h2>
+    <div class="tablewrap"><table id="units"></table></div>
+  </section>
+
+  </div>
+  <p class="foot">Results: TSE (resultados.tse.jus.br), polled every 5 minutes. 2026 presidential count history: urnaaberta.com.br plus this server's own snapshots. 2022 curves and 2022 final results by area: TSE open data. Projections are simple arithmetic on the uncounted electorate, not a forecast model.</p>
+</main>
+
+<div id="tip" class="tip" hidden></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

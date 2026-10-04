@@ -1,0 +1,9 @@
+# Render blueprint: one small Node web service, no build step, no dependencies.
+services:
+  - type: web
+    name: brazil-2026-live-count
+    runtime: node
+    plan: free
+    buildCommand: "true"
+    startCommand: node server.js
+    healthCheckPath: /

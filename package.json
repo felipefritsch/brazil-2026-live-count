@@ -1,0 +1,12 @@
+{
+  "name": "brazil-2026-live-count",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Live dashboard for the 2026 Brazilian presidential and Rio de Janeiro governor counts",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

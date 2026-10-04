@@ -1,0 +1,4 @@
+data/snapshots.jsonl
+.claude/
+__pycache__/
+.DS_Store
