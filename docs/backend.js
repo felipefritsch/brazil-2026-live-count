@@ -333,6 +333,22 @@ function addSwing(race, round, base) {
   const then = thenAll / validAll;
   // Like-for-like: weight each area's swing by its 2022 size, then apply it to the 2022 final figure.
   race.swing = { ...info, avg, then, implied: then + avg, coverage: (wSum / validAll) * 100 };
+
+  // President only: PT's projected final votes in each state against its 2022 votes there.
+  if (race.key === 'president' && race.projection) {
+    const sum = { votes22: 0, projected: 0 };
+    for (const u of race.units) {
+      const b = lookup(u);
+      if (!b) continue;
+      const now = u.cands.find((c) => c.n === '13')?.votes || 0;
+      u.ptVotes22 = b.pt;
+      u.ptProjected = Math.round(now + (race.projection.perUnit[u.code]?.gains['13'] || 0));
+      u.ptDelta = u.ptProjected - b.pt;
+      sum.votes22 += b.pt;
+      sum.projected += u.ptProjected;
+    }
+    race.swing.pt = { ...sum, delta: sum.projected - sum.votes22, name: name('13') };
+  }
 }
 
 module.exports = { addSwing };
@@ -433,6 +449,25 @@ function createCore(opts = {}) {
       z.label = `Zone ${Number(z.zone)}`;
       z.name = `Rio de Janeiro · zone ${Number(z.zone)}`;
     }
+    finish(race, round);
+    // Candidates whose votes are annulled pending a court ruling: also compute the race without them.
+    const out = race.total.cands.filter((c) => /sub judice/i.test(c.status || ''));
+    if (out.length) {
+      const drop = new Set(out.map((c) => c.n));
+      const strip = (u) => {
+        const cands = u.cands.filter((c) => !drop.has(c.n)).map((c) => ({ ...c }));
+        const valid = cands.reduce((t, c) => t + c.votes, 0);
+        for (const c of cands) c.pct = valid ? (c.votes / valid) * 100 : 0;
+        return { ...u, cands, votesValid: valid };
+      };
+      const alt = { key, title: race.title, total: strip(race.total), units: race.units.map(strip), zones: race.zones.map(strip) };
+      finish(alt, round);
+      race.alt = { total: alt.total, units: alt.units, zones: alt.zones, projection: alt.projection, swing: alt.swing };
+      race.subJudice = out.map((c) => ({ n: c.n, name: c.name }));
+    }
+  }
+
+  function finish(race, round) {
     // Project Rio city zone by zone when every zone loaded; otherwise as one block.
     const rio = race.units.find((u) => u.code === RIO_CITY);
     const zonesComplete = rio && race.zones.length && race.zones.length === (munNames?.[RIO_CITY]?.zones.length || -1);

@@ -36,6 +36,13 @@
   <section class="card" id="empty" hidden><h2 id="empty-title"></h2><p class="sub" id="empty-text"></p></section>
   <div id="content">
   <section class="card">
+    <div class="cardhead" id="subjudice" hidden>
+      <span class="sub" id="subjudice-text" style="margin:0"></span>
+      <div class="seg" id="subjudice-mode">
+        <button data-sj="in" aria-pressed="true">Votes counted</button>
+        <button data-sj="out" aria-pressed="false">Votes annulled</button>
+      </div>
+    </div>
     <h2 id="headline">Loading results…</h2>
     <p class="sub">Share of valid votes. The marker shows the projected final share once the uncounted vote comes in.</p>
     <div id="cands"></div>
@@ -86,6 +93,13 @@
     <p id="trend-sub" class="sub"></p>
     <div id="trend-legend" class="legend"></div>
     <div id="trend"></div>
+  </section>
+
+  <section class="card" id="pt-card" hidden>
+    <h2 id="pt-title"></h2>
+    <p class="sub" id="pt-sub"></p>
+    <div id="pt-map"></div>
+    <div id="pt-legend" class="legend"></div>
   </section>
 
   <section class="card">
