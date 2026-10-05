@@ -96,7 +96,15 @@
   </section>
 
   <section class="card" id="pt-card" hidden>
-    <h2 id="pt-title"></h2>
+    <div class="cardhead">
+      <h2 id="pt-title"></h2>
+      <div class="seg" id="pt-mode">
+        <button data-metric="net" aria-pressed="true">Net (PT minus PL)</button>
+        <button data-metric="ptDelta" aria-pressed="false">PT votes</button>
+        <button data-metric="plDelta" aria-pressed="false">PL votes</button>
+        <button data-metric="validDelta" aria-pressed="false">All valid votes</button>
+      </div>
+    </div>
     <p class="sub" id="pt-sub"></p>
     <div id="pt-map"></div>
     <div id="pt-legend" class="legend"></div>
