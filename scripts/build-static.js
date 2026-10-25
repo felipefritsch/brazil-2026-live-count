@@ -8,7 +8,7 @@ const out = path.join(root, 'docs');
 fs.rmSync(out, { recursive: true, force: true });
 fs.cpSync(path.join(root, 'public'), out, { recursive: true });
 fs.mkdirSync(path.join(out, 'data'), { recursive: true });
-for (const f of ['pres2022_curve.json', 'pres2026r1_curve.json']) fs.copyFileSync(path.join(root, 'data', f), path.join(out, 'data', f));
+for (const f of ['pres2022_curve.json', 'pres2026r1_curve.json', 'states_mun.json']) fs.copyFileSync(path.join(root, 'data', f), path.join(out, 'data', f));
 fs.writeFileSync(path.join(out, '.nojekyll'), '');
 
 const mods = ['tse', 'projection', 'swing', 'core']; // dependency order
@@ -44,7 +44,7 @@ const runoff = fs.readFileSync(html, 'utf8')
   .replace('<head>', '<head>\n<base href="../">')
   .replace(/<title>.*?<\/title>/, '<title>Brazil 2026 Presidential Runoff</title>')
   .replace('<h1>Brazil 2026 · live count</h1>', '<h1>Brazil 2026 · presidential runoff</h1>')
-  .replace('<script src="backend.js"></script>', '<script>window.DASH = { races: [\'president\'], round: 2, manual: true };</script>\n<script src="backend.js"></script>');
+  .replace('<script src="backend.js"></script>', '<script>window.DASH = { races: [\'president\'], round: 2, manual: true, subStates: [\'sp\', \'mg\'] };</script>\n<script src="backend.js"></script>');
 fs.mkdirSync(path.join(out, 'runoff'), { recursive: true });
 fs.writeFileSync(path.join(out, 'runoff', 'index.html'), runoff);
 console.log('built docs/', fs.readdirSync(out));

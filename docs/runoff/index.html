@@ -78,6 +78,8 @@
     </section>
   </div>
 
+  <div id="states"></div>
+
   <section class="card" id="zones-card" hidden>
     <h2>Rio de Janeiro city by electoral zone</h2>
     <p class="sub" id="zones-sub"></p>
@@ -127,7 +129,7 @@
 
 <div id="tip" class="tip" hidden></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
-<script>window.DASH = { races: ['president'], round: 2, manual: true };</script>
+<script>window.DASH = { races: ['president'], round: 2, manual: true, subStates: ['sp', 'mg'] };</script>
 <script src="backend.js"></script>
 <script src="app.js"></script>
 </body>

@@ -106,3 +106,7 @@ td .sw { display: inline-block; margin-right: 6px; }
 td.frz, th.frz { position: sticky; background: var(--surface); z-index: 1; }
 th.frz { z-index: 3; }
 .frz-last { box-shadow: inset -1px 0 0 var(--axis); }
+
+/* Municipal state cards */
+.grid2.flat { gap: 16px; }
+.h3 { font-size: 14px; font-weight: 600; margin: 0 0 8px; color: var(--ink2); }

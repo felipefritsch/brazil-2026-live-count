@@ -7,6 +7,11 @@ let state = null;
 let curves2022 = {};
 let curveR1 = []; // 2026 first round, PL vs PT only, by % counted
 let ptBase = 'r22';
+// Municipal breakdowns (runoff page): metadata, per-state map mode and loading progress.
+let subMeta = null;
+const subMode = {};
+let subProgress = null;
+const STATE_NAMES = { sp: 'São Paulo', mg: 'Minas Gerais' };
 let pres2022 = [];
 let round = null;
 let subJudice = 'in';
@@ -98,9 +103,23 @@ async function load(manual = false) {
     btn.disabled = false;
     btn.textContent = 'Update now';
     if (state) render();
+    if (window.Backend && subMeta && state?.rounds?.[round]?.races?.[raceKey]?.total.sectionsPct > 0) loadSub();
     // Server still on its first poll: try again shortly.
     if (state && !state.fetchedAt && !state.stale && !window.Backend) setTimeout(() => load(), 4000);
   }
+}
+
+async function loadSub() {
+  subProgress = [0, 0];
+  renderStates();
+  try {
+    await Backend.pollSub(subMeta, (done, total) => { subProgress = [done, total]; renderStates(true); });
+    state.sub = Backend.payload().sub;
+  } catch (e) {
+    if (state) state.subError = 'Municipal results could not be loaded';
+  }
+  subProgress = null;
+  renderStates();
 }
 
 // ---------- render ----------
@@ -161,6 +180,7 @@ function render() {
   renderTiles(race);
   renderMap(race, color);
   renderLeft(race, color);
+  renderStates();
   renderZones(race, color);
   renderTrend(race, color);
   renderPtMap(race);
@@ -407,6 +427,100 @@ function renderMap(race, color) {
 function renderLeft(race, color) {
   const rows = race.units.filter((u) => u.electorateLeft > 0).sort((x, y) => y.electorateLeft - x.electorateLeft).slice(0, 14);
   leftBars($('#left'), rows, race, color, raceKey === 'president' ? 54 : null);
+}
+
+// One card per state: municipal map with its own mode switch, and where that state's uncounted vote is.
+function renderStates(progressOnly = false) {
+  const box = $('#states');
+  const race = currentRace();
+  const ufs = DASH.subStates || [];
+  if (!ufs.length || !race || raceKey !== 'president') { box.innerHTML = ''; return; }
+  const color = colorMap(state.rounds[round].races[raceKey]);
+  for (const uf of ufs) {
+    let card = box.querySelector(`[data-uf="${uf}"]`);
+    if (!card) {
+      card = document.createElement('section');
+      card.className = 'card';
+      card.dataset.uf = uf;
+      card.innerHTML = `<div class="cardhead"><h2>${STATE_NAMES[uf] || uf.toUpperCase()} by municipality</h2><div class="seg"></div></div>
+        <p class="sub st-sum"></p><div class="grid2 flat"><div><div class="st-map"></div><div class="legend st-legend"></div></div>
+        <div><h3 class="h3">Where the uncounted vote is</h3><div class="st-left"></div></div></div>`;
+      box.appendChild(card);
+    }
+    const sum = card.querySelector('.st-sum');
+    const units = state.sub?.round === round ? state.sub.states?.[uf] : null;
+    if (subProgress) {
+      const [d, n] = subProgress;
+      sum.textContent = `Loading municipal results${n ? `: ${d} of ${n} files` : '…'}${units ? ' (showing the previous load meanwhile)' : ''}`;
+      if (progressOnly || !units) continue;
+    }
+    if (!units) {
+      if (!subProgress) sum.textContent = state.subError || 'Municipal results load once the count has started.';
+      continue;
+    }
+    for (const u of units) u.label = title(u.name);
+    renderStateCard(card, uf, units, race, color);
+  }
+}
+
+function renderStateCard(card, uf, units, race, color) {
+  const modes = [['leader', 'Leader'], ['counted', '% counted'], ['left', 'Votes left'],
+    ...(round === 2 && units.some((u) => u.swingR1 != null) ? [['swingR1', 'Shift vs 1st round']] : []),
+    ...(units.some((u) => u.swing != null) ? [['swing', 'Swing vs 2022']] : [])];
+  let mode = subMode[uf] || 'leader';
+  if (!modes.some(([m]) => m === mode)) mode = 'leader';
+  const seg = card.querySelector('.seg');
+  seg.innerHTML = modes.map(([m, t]) => `<button data-m="${m}" aria-pressed="${m === mode}">${t}</button>`).join('');
+  seg.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => { subMode[uf] = b.dataset.m; renderStateCard(card, uf, units, race, color); }));
+
+  const parent = race.units.find((u) => u.code === uf);
+  const done = units.filter((u) => u.sectionsPct >= 100).length;
+  const notStarted = units.filter((u) => !u.votesValid).length;
+  const capital = { sp: '71072', mg: '41238' }[uf];
+  const cap = units.find((u) => u.code === capital);
+  card.querySelector('.st-sum').textContent = `${parent ? `${pct(parent.sectionsPct, 1)} of the state counted. ` : ''}${done} of ${units.length} municipalities fully counted, ${notStarted} not started.${cap ? ` ${cap.label}: ${pct(cap.sectionsPct, 1)} counted${cap.votesValid ? `, ${short(cap.cands[0].name)} ${pct(cap.cands[0].pct, 1)}` : ''}.` : ''}`;
+
+  const fc = geo[uf];
+  const box = card.querySelector('.st-map');
+  if (fc) {
+    const w = Math.max(280, box.clientWidth);
+    const h = Math.min(w * (uf === 'mg' ? 0.9 : 0.7), 460);
+    const path = d3.geoPath(d3.geoIdentity().reflectY(true).fitSize([w, h], fc));
+    const byGeo = Object.fromEntries(units.filter((u) => u.geo).map((u) => [u.geo, u]));
+    const seq = d3.interpolateRgb(css('--seq-lo'), css('--seq-hi'));
+    const maxLeft = d3.max(units, (u) => u.electorateLeft) || 1;
+    const sw = units.filter((u) => u[mode] != null).map((u) => Math.abs(u[mode])).sort(d3.ascending);
+    const SW = Math.max(10, Math.ceil((d3.quantile(sw, 0.9) || 10) / 5) * 5);
+    const div = d3.scaleLinear([-SW, 0, SW], [css('--div-neg'), css('--div-mid'), css('--div-pos')]).clamp(true);
+    const fill = (u) => {
+      if (!u) return ['var(--neutral)', 1];
+      if (mode === 'counted') return [seq(u.sectionsPct / 100), 1];
+      if (mode === 'left') return u.electorateLeft ? [seq(Math.sqrt(u.electorateLeft / maxLeft)), 1] : ['var(--neutral)', 1];
+      if (mode === 'swing' || mode === 'swingR1') return u[mode] == null ? ['var(--neutral)', 1] : [div(u[mode]), 1];
+      if (!u.votesValid) return ['var(--neutral)', 1];
+      const m = u.cands[0].pct - (u.cands[1]?.pct || 0);
+      return [color(u.cands[0].n), 0.3 + 0.7 * Math.min(m / 30, 1)];
+    };
+    const svg = d3.create('svg').attr('viewBox', `0 0 ${w} ${h}`).attr('role', 'img').attr('aria-label', `${STATE_NAMES[uf]} by municipality`);
+    svg.selectAll('path').data(fc.features).join('path').attr('class', 'unit').attr('d', path).style('stroke-width', 0.4)
+      .each(function (d) { const [f, o] = fill(byGeo[d.properties.codarea]); d3.select(this).style('fill', f).style('fill-opacity', o); })
+      .on('mousemove', (evt, d) => { const u = byGeo[d.properties.codarea]; if (u) showTip(evt, unitTip(u, race, color)); })
+      .on('mouseleave', hideTip);
+    box.replaceChildren(svg.node());
+    const lg = card.querySelector('.st-legend');
+    if (mode === 'leader') {
+      const leaders = [...new Set(units.filter((u) => u.votesValid).map((u) => u.cands[0].n))];
+      lg.innerHTML = leaders.map((n) => `<span><i class="sq" style="background:${color(n)}"></i>${short(race.total.cands.find((c) => c.n === n)?.name || n)} leads</span>`).join('') + '<span>Stronger colour = wider lead (full at 30 points); grey = nothing counted yet</span>';
+    } else if (mode === 'swing' || mode === 'swingR1') {
+      const ref = mode === 'swing' ? race.swing : race.swingR1;
+      lg.innerHTML = `<span>${ref?.neg || 'toward PT'} <i class="ramp" style="background:linear-gradient(90deg,${css('--div-neg')},${css('--div-mid')},${css('--div-pos')})"></i> ${ref?.pos || 'toward PL'}</span><span>Full colour at ${SW} points. Change in the PL-minus-PT lead against ${mode === 'swing' ? `the 2022 ${round === 2 ? 'runoff' : 'first round'}` : 'the 2026 first round (PL and PT votes only)'} in the same municipality.</span>`;
+    } else {
+      const label = mode === 'counted' ? ['0% counted', '100%'] : ['few voters left', `${big(maxLeft)} left`];
+      lg.innerHTML = `<span>${label[0]} <i class="ramp" style="background:linear-gradient(90deg,${css('--seq-lo')},${css('--seq-hi')})"></i> ${label[1]}</span>`;
+    }
+  }
+  const rows = units.filter((u) => u.electorateLeft > 0).sort((x, y) => y.electorateLeft - x.electorateLeft).slice(0, 14);
+  leftBars(card.querySelector('.st-left'), rows, race, color, null);
 }
 
 function renderZones(race, color) {
@@ -705,6 +819,14 @@ if (DASH.round) { $('#round').hidden = true; setRound(DASH.round); }
     fetch('data/pres2026r1_curve.json').then((r) => r.json()).catch(() => []),
   ]);
   curveR1 = cR1 || [];
+  if (DASH.subStates?.length) {
+    const [meta, ...shapes] = await Promise.all([
+      fetch('data/states_mun.json').then((r) => r.json()).catch(() => null),
+      ...DASH.subStates.map((uf) => fetch(`geo/${uf}-mun.json`).then((r) => r.json()).catch(() => null)),
+    ]);
+    subMeta = meta && Object.fromEntries(DASH.subStates.filter((uf) => meta[uf]).map((uf) => [uf, meta[uf]]));
+    DASH.subStates.forEach((uf, i) => { geo[uf] = shapes[i]; });
+  }
   geo.president = g1;
   geo.governor = g2;
   curves2022 = c22 || {};
