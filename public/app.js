@@ -5,6 +5,8 @@ const SLOTS = 7;
 
 let state = null;
 let curves2022 = {};
+let curveR1 = []; // 2026 first round, PL vs PT only, by % counted
+let ptBase = 'r22';
 let pres2022 = [];
 let round = null;
 let subJudice = 'in';
@@ -64,6 +66,7 @@ function unitTip(u, race, color) {
     `<div class="row"><span><i style="background:${color(c.n)}"></i>${short(c.name)}</span><b>${pct(c.pct, 1)}</b></div>`).join('');
   return `<b>${title(u.name)}</b><div>${pct(u.sectionsPct, 1)} of sections counted</div>${rows}
     ${u.swing != null && race.swing ? `<div style="margin-top:4px">Swing vs 2022: <b>${Math.abs(u.swing).toFixed(1)} pts</b> ${u.swing >= 0 ? race.swing.pos : race.swing.neg}</div>` : ''}
+    ${u.swingR1 != null && race.swingR1 ? `<div>Shift vs 1st round: <b>${Math.abs(u.swingR1).toFixed(1)} pts</b> ${u.swingR1 >= 0 ? race.swingR1.pos : race.swingR1.neg}</div>` : ''}
     <div style="margin-top:4px">${nf.format(u.electorateLeft)} voters in uncounted sections${proj ? ` · about ${big(proj.left)} valid votes to come` : ''}</div>`;
 }
 
@@ -215,9 +218,13 @@ function renderCands(race, color) {
 }
 
 function at2022(p) {
-  if (!pres2022.length) return null;
-  const i = d3.bisector((d) => d.pct).left(pres2022, p);
-  return pres2022[Math.min(i, pres2022.length - 1)];
+  return atCurve(pres2022, p);
+}
+
+function atCurve(curve, p) {
+  if (!curve.length) return null;
+  const i = d3.bisector((d) => d.pct).left(curve, p);
+  return curve[Math.min(i, curve.length - 1)];
 }
 
 function renderTiles(race) {
@@ -279,6 +286,30 @@ function renderTiles(race) {
       });
     }
   }
+  if (raceKey === 'president' && round === 2 && curveR1.length) {
+    const pt = t.cands.find((c) => c.n === '13');
+    const pl = t.cands.find((c) => c.n === '22');
+    const then = atCurve(curveR1, t.sectionsPct);
+    const fin = curveR1[curveR1.length - 1];
+    if (pt && pl && then && fin) {
+      const dL = fin.lula - then.lula;
+      const dB = fin.bolsonaro - then.bolsonaro;
+      tiles.push({
+        k: 'If the rest moves as it did in the 1st round',
+        v: `${(pl.pct + dB).toFixed(1)}% – ${(pt.pct + dL).toFixed(1)}%`,
+        d: `${short(pl.name)} – ${short(pt.name)}. Counting only PL and PT votes, from ${t.sectionsPct.toFixed(0)}% counted to the end of the first round PT moved ${dL >= 0 ? '+' : ''}${dL.toFixed(2)} and PL ${dB >= 0 ? '+' : ''}${dB.toFixed(2)} points`,
+      });
+    }
+  }
+  if (race.swingR1) {
+    const sw = race.swingR1;
+    const sign = (v) => `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(1)}`;
+    tiles.push({
+      k: 'If every state keeps its shift from the 1st round',
+      v: `${sw.implied >= 0 ? 'PL' : 'PT'} ahead by ${Math.abs(sw.implied).toFixed(1)} pts`,
+      d: `Average shift so far is ${sign(sw.avg)} points ${sw.avg >= 0 ? sw.pos : sw.neg}, weighting each state by its first-round PL and PT votes. In the first round, counting only those two, PL led by ${sign(sw.then)}`,
+    });
+  }
   if (race.swing) {
     const sw = race.swing;
     const sign = (v) => `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(1)}`;
@@ -311,17 +342,18 @@ function renderMap(race, color) {
   const seq = d3.interpolateRgb(css('--seq-lo'), css('--seq-hi'));
   const maxLeft = d3.max(race.units, (u) => u.electorateLeft) || 1;
   // Colour scale tops out near the 90th percentile of swings so a few outliers do not wash out the map.
-  const swings = race.units.filter((u) => u.swing != null).map((u) => Math.abs(u.swing)).sort(d3.ascending);
+  const swKey = mapMode === 'swingR1' ? 'swingR1' : 'swing';
+  const swings = race.units.filter((u) => u[swKey] != null).map((u) => Math.abs(u[swKey])).sort(d3.ascending);
   const SWING_MAX = Math.max(10, Math.ceil((d3.quantile(swings, 0.9) || 10) / 5) * 5);
   const div = d3.scaleLinear([-SWING_MAX, 0, SWING_MAX], [css('--div-neg'), css('--div-mid'), css('--div-pos')]).clamp(true);
-  const swingBtn = document.querySelector('#map-mode [data-mode="swing"]');
-  swingBtn.hidden = !race.swing;
-  if (!race.swing && mapMode === 'swing') { mapMode = 'leader'; document.querySelectorAll('#map-mode button').forEach((x) => x.setAttribute('aria-pressed', x.dataset.mode === 'leader')); }
+  document.querySelector('#map-mode [data-mode="swing"]').hidden = !race.swing;
+  document.querySelector('#map-mode [data-mode="swingR1"]').hidden = !race.swingR1;
+  if (!race[swKey] && mapMode === swKey) { mapMode = 'leader'; document.querySelectorAll('#map-mode button').forEach((x) => x.setAttribute('aria-pressed', x.dataset.mode === 'leader')); }
 
   const fill = (u) => {
     if (!u) return { f: 'var(--neutral)', o: 1 };
     if (mapMode === 'counted') return { f: seq(u.sectionsPct / 100), o: 1 };
-    if (mapMode === 'swing') return u.swing == null ? { f: 'var(--neutral)', o: 1 } : { f: div(u.swing), o: 1 };
+    if (mapMode === 'swing' || mapMode === 'swingR1') return u[swKey] == null ? { f: 'var(--neutral)', o: 1 } : { f: div(u[swKey]), o: 1 };
     if (mapMode === 'left') return u.electorateLeft ? { f: seq(Math.sqrt(u.electorateLeft / maxLeft)), o: 1 } : { f: 'var(--neutral)', o: 1 };
     if (!u.votesValid) return { f: 'var(--neutral)', o: 1 };
     const m = u.cands[0].pct - (u.cands[1]?.pct || 0);
@@ -359,8 +391,8 @@ function renderMap(race, color) {
       const c = race.total.cands.find((k) => k.n === n);
       return `<span><i class="sq" style="background:${color(n)}"></i>${short(c.name)} leads</span>`;
     }).join('') + '<span>Stronger colour = wider lead (full at 30 points)</span>';
-  } else if (mapMode === 'swing') {
-    const sw = race.swing;
+  } else if (mapMode === 'swing' || mapMode === 'swingR1') {
+    const sw = race[swKey];
     lg.innerHTML = `<span>${sw.neg} <i class="ramp" style="background:linear-gradient(90deg,${css('--div-neg')},${css('--div-mid')},${css('--div-pos')})"></i> ${sw.pos}</span><span>Full colour at ${SWING_MAX} points. ${sw.what}. Areas still counting can move.</span>`;
   } else {
     const label = mapMode === 'counted' ? ['0% counted', '100%'] : ['few voters left', `${big(maxLeft)} left`];
@@ -435,7 +467,7 @@ function renderTrend(race, color) {
   const src = state.rounds[round].historySource?.[raceKey];
   $('#trend-title').textContent = isPres ? 'How the count has moved, against 2022 at the same point' : 'How the count has moved';
   $('#trend-sub').textContent = isPres
-    ? `Share of valid votes as sections were counted. Dashed lines are the 2022 ${round === 2 ? 'second' : 'first'} round (Lula and Jair Bolsonaro) at the same percentage counted.`
+    ? `Share of valid votes as sections were counted. Dashed lines are the 2022 ${round === 2 ? 'second' : 'first'} round (Lula and Jair Bolsonaro) at the same percentage counted${round === 2 ? '; dotted lines are this year\'s first round, counting only PL and PT votes' : ''}.`
     : `Share of valid votes as sections were counted. There is no earlier record for this race, so the line starts when this dashboard first ran (${hist.length ? pct(hist[0].pct, 1) : 'now'} counted) and grows with every update. TSE published no 2022 count history for governor races.`;
 
   // The governor line only exists from this dashboard's first poll, so zoom to that stretch.
@@ -451,7 +483,12 @@ function renderTrend(race, color) {
     series.push({ id: 'l22', name: 'Lula 2022', color: has('13') ? color('13') : 'var(--other)', dash: true, pts: ref.map((p) => [p.pct, p.lula]) });
     series.push({ id: 'b22', name: 'Jair Bolsonaro 2022', color: has('22') ? color('22') : 'var(--other)', dash: true, pts: ref.map((p) => [p.pct, p.bolsonaro]) });
   }
-  $('#trend-legend').innerHTML = series.map((s) => `<span><i class="${s.dash ? 'dash' : ''}" style="${s.dash ? `border-color:${s.color}` : `background:${s.color}`}"></i>${s.name}</span>`).join('');
+  if (isPres && round === 2 && curveR1.length) {
+    const ref = curveR1.filter((p) => p.pct >= Math.max(x0, 1));
+    series.push({ id: 'l1', name: 'Lula, 1st round (vs PL only)', color: color('13'), dash: 'dot', pts: ref.map((p) => [p.pct, p.lula]) });
+    series.push({ id: 'b1', name: 'F. Bolsonaro, 1st round (vs PT only)', color: color('22'), dash: 'dot', pts: ref.map((p) => [p.pct, p.bolsonaro]) });
+  }
+  $('#trend-legend').innerHTML = series.map((s) => `<span><i class="${s.dash ? 'dash' : ''}" style="${s.dash ? `border-color:${s.color};border-top-style:${s.dash === 'dot' ? 'dotted' : 'dashed'}` : `background:${s.color}`}"></i>${s.name}</span>`).join('');
 
   const w = Math.max(300, box.clientWidth);
   const h = Math.min(380, Math.max(260, w * 0.42));
@@ -480,7 +517,7 @@ function renderTrend(race, color) {
     const pts = inRange(s);
     if (!pts.length) continue;
     svg.append('path').attr('d', line(pts)).style('fill', 'none').style('stroke', s.color)
-      .style('stroke-width', s.dash ? 1.5 : 2).style('stroke-dasharray', s.dash ? '5 4' : null).style('opacity', s.dash ? 0.75 : 1);
+      .style('stroke-width', s.dash ? 1.5 : 2).style('stroke-dasharray', s.dash === 'dot' ? '1.5 3' : s.dash ? '5 4' : null).style('opacity', s.dash ? 0.75 : 1);
   }
   // end markers + direct labels for the 2026 lines, nudged apart
   const ends = series.filter((s) => !s.dash).map((s) => ({ s, p: inRange(s).at(-1) })).filter((e) => e.p)
@@ -513,7 +550,10 @@ function renderTrend(race, color) {
 
 // President: projected final votes per state against 2022 — PT, PL, all valid votes, and the net of PT minus PL.
 function renderPtMap(race) {
-  const t = race.swing?.vs22;
+  $('#pt-base').hidden = !(race.swingR1?.votes && race.swing?.vs22);
+  const S = ptBase === 'r1' && race.swingR1?.votes ? race.swingR1 : race.swing;
+  const vsKey = S === race.swingR1 ? 'vsR1' : 'vs22';
+  const t = S?.votes || S?.vs22;
   const fc = geo.president;
   const card = $('#pt-card');
   card.hidden = !(t && fc && raceKey === 'president');
@@ -522,31 +562,31 @@ function renderPtMap(race) {
   const pl = short(t.plName);
   const rnd = round === 2 ? 'second' : 'first';
   const moved = (v) => `${v < 0 ? 'down' : 'up'} ${big(Math.abs(v))}`;
-  $('#pt-title').textContent = `Against 2022, ${pt} is ${moved(t.ptDelta)} votes and PL is ${moved(t.plDelta)}: a ${big(Math.abs(t.net))}-vote move toward ${t.net < 0 ? 'PL' : 'PT'}`;
+  $('#pt-title').textContent = `Against ${S.baseline}, ${pt} is ${moved(t.ptDelta)} votes and PL is ${moved(t.plDelta)}: a ${big(Math.abs(t.net))}-vote move toward ${t.net < 0 ? 'PL' : 'PT'}`;
   const meta = {
     net: { label: `Net for ${pt}`, lo: 'gap moved toward PL', hi: 'gap moved toward PT', text: `${pt}'s change in votes minus the PL candidate's change. A state where ${pt} gained votes still shows a loss here if PL gained more.` },
-    ptDelta: { label: `${pt} votes`, lo: 'fewer votes than Lula in 2022', hi: 'more votes', text: `${pt}'s projected votes minus Lula's 2022 votes. Read it next to "All valid votes": more people voting lifts every candidate.` },
-    plDelta: { label: `${pl} votes`, lo: 'fewer votes than Jair Bolsonaro in 2022', hi: 'more votes', text: `${pl}'s projected votes minus Jair Bolsonaro's 2022 votes.` },
-    validDelta: { label: 'All valid votes', lo: 'fewer valid votes than 2022', hi: 'more valid votes', text: 'Projected valid votes for all candidates minus the 2022 total. This is the turnout backdrop for the other three views.' },
+    ptDelta: { label: `${pt} votes`, lo: `fewer votes than ${S.ptThen}`, hi: 'more votes', text: `${pt}'s projected votes minus ${S.ptThen}. Read it next to "All valid votes": more people voting lifts every candidate.` },
+    plDelta: { label: `${pl} votes`, lo: `fewer votes than ${S.plThen}`, hi: 'more votes', text: `${pl}'s projected votes minus ${S.plThen}.` },
+    validDelta: { label: 'All valid votes', lo: 'fewer valid votes', hi: 'more valid votes', text: `Projected valid votes minus the valid votes in ${S.baseline}. This is the turnout backdrop for the other three views.` },
   }[vsMetric];
-  $('#pt-sub').textContent = `${meta.text} Projected finals are votes counted so far plus the projection for uncounted sections; 2022 figures are the final ${rnd}-round results. Nationally: ${pt} ${signed(t.ptDelta)}, ${pl} ${signed(t.plDelta)}, all valid votes ${signed(t.validDelta)}.`;
+  $('#pt-sub').textContent = `${meta.text} Projected finals are votes counted so far plus the projection for uncounted sections, compared with ${S.baseline}. Nationally: ${pt} ${signed(t.ptDelta)}, ${pl} ${signed(t.plDelta)}, all valid votes ${signed(t.validDelta)}.`;
   const box = $('#pt-map');
   const w = Math.max(280, Math.min(720, box.clientWidth));
   const h = Math.min(w, 560);
   const path = d3.geoPath(d3.geoIdentity().reflectY(true).fitSize([w, h], fc));
-  const byGeo = Object.fromEntries(race.units.filter((u) => u.geo && u.vs22).map((u) => [u.geo, u]));
-  const val = (u) => u.vs22[vsMetric];
+  const byGeo = Object.fromEntries(race.units.filter((u) => u.geo && u[vsKey]).map((u) => [u.geo, u]));
+  const val = (u) => u[vsKey][vsMetric];
   const mags = Object.values(byGeo).map((u) => Math.abs(val(u))).sort(d3.ascending);
   const top = d3.quantile(mags, 0.9) || 1;
   const div = d3.scaleLinear([-top, 0, top], [css('--div-neg'), css('--div-mid'), css('--div-pos')]).clamp(true);
   const row = (k, v) => `<div class="row"><span>${k}</span><b>${v}</b></div>`;
   const chg = (now, then) => `${signed(now - then)} (${(100 * (now - then) / then).toFixed(1)}%)`;
   const tipFor = (u) => `<b>${u.name}</b>
-    ${row(`${pt} vs Lula 2022`, chg(u.vs22.pt, u.vs22.pt22))}
-    ${row(`${pl} vs J. Bolsonaro 2022`, chg(u.vs22.pl, u.vs22.pl22))}
-    ${row('All valid votes', chg(u.vs22.valid, u.vs22.valid22))}
-    ${row(`Net for ${pt}`, signed(u.vs22.net))}
-    <div style="margin-top:4px">PT share ${(100 * u.vs22.pt22 / u.vs22.valid22).toFixed(1)}% → ${(100 * u.vs22.pt / u.vs22.valid).toFixed(1)}% · PL share ${(100 * u.vs22.pl22 / u.vs22.valid22).toFixed(1)}% → ${(100 * u.vs22.pl / u.vs22.valid).toFixed(1)}%</div>
+    ${row(`${pt} vs ${S.ptThen}`, chg(u[vsKey].pt, u[vsKey].pt22))}
+    ${row(`${pl} vs ${S.plThen}`, chg(u[vsKey].pl, u[vsKey].pl22))}
+    ${row('All valid votes', chg(u[vsKey].valid, u[vsKey].valid22))}
+    ${row(`Net for ${pt}`, signed(u[vsKey].net))}
+    <div style="margin-top:4px">PT share ${(100 * u[vsKey].pt22 / u[vsKey].valid22).toFixed(1)}% → ${(100 * u[vsKey].pt / u[vsKey].valid).toFixed(1)}% · PL share ${(100 * u[vsKey].pl22 / u[vsKey].valid22).toFixed(1)}% → ${(100 * u[vsKey].pl / u[vsKey].valid).toFixed(1)}%</div>
     <div>${pct(u.sectionsPct, 1)} of sections counted</div>`;
   const svg = d3.create('svg').attr('viewBox', `0 0 ${w} ${h}`).attr('role', 'img').attr('aria-label', `${meta.label} against 2022 by state`).style('max-width', `${w}px`).style('margin', '0 auto');
   svg.selectAll('path').data(fc.features).join('path').attr('class', 'unit').attr('d', path)
@@ -560,7 +600,7 @@ function renderPtMap(race) {
   halo(lab.append('text')).attr('dy', '0.95em').style('font-size', '10.5px').style('font-weight', 600).text((d) => signedBig(val(byGeo[d.properties.codarea])));
   box.replaceChildren(svg.node());
   const zz = race.units.find((u) => u.code === 'zz');
-  $('#pt-legend').innerHTML = `<span>${meta.lo} <i class="ramp" style="background:linear-gradient(90deg,${css('--div-neg')},${css('--div-mid')},${css('--div-pos')})"></i> ${meta.hi}</span><span>Full colour at ${big(top)} votes</span>${zz?.vs22 ? `<span>Abroad (not on map): ${signed(val(zz))}</span>` : ''}<span>Small states are unlabelled; hover, or see the table below.</span>`;
+  $('#pt-legend').innerHTML = `<span>${meta.lo} <i class="ramp" style="background:linear-gradient(90deg,${css('--div-neg')},${css('--div-mid')},${css('--div-pos')})"></i> ${meta.hi}</span><span>Full colour at ${big(top)} votes</span>${zz?.[vsKey] ? `<span>Abroad (not on map): ${signed(val(zz))}</span>` : ''}<span>Small states are unlabelled; hover, or see the table below.</span>`;
 }
 
 function renderTable(race, color) {
@@ -572,12 +612,12 @@ function renderTable(race, color) {
     return {
       u, name: title(u.name), counted: u.sectionsPct, leader: u.votesValid ? u.cands[0] : null,
       margin: u.votesValid ? u.cands[0].pct - (u.cands[1]?.pct || 0) : 0,
-      a: sh[a.n] || 0, b: sh[b?.n] || 0, swing: u.swing ?? null, ptDelta: u.vs22?.ptDelta ?? null, plDelta: u.vs22?.plDelta ?? null, net22: u.vs22?.net ?? null, left: u.electorateLeft, net: (g[a.n] || 0) - (g[b?.n] || 0),
+      a: sh[a.n] || 0, b: sh[b?.n] || 0, swing: u.swing ?? null, swingR1: u.swingR1 ?? null, netR1: u.vsR1?.net ?? null, ptDelta: u.vs22?.ptDelta ?? null, plDelta: u.vs22?.plDelta ?? null, net22: u.vs22?.net ?? null, left: u.electorateLeft, net: (g[a.n] || 0) - (g[b?.n] || 0),
     };
   });
   const cols = [
     ['name', 'Area', 'l'], ['counted', '% counted'], ['leader', 'Leading', 'l'], ['margin', 'Lead (pts)'],
-    ['a', short(a.name)], ['b', b ? short(b.name) : ''], ...(race.swing ? [['swing', 'Swing vs 2022']] : []), ...(race.swing?.vs22 ? [['ptDelta', `${short(race.swing.vs22.ptName)} votes vs 2022`], ['plDelta', `${short(race.swing.vs22.plName).split(' ').pop()} votes vs 2022`], ['net22', `Net for ${short(race.swing.vs22.ptName)}`]] : []), ['left', 'Voters left'], ['net', `Projected net for ${short(a.name).split(' ').pop()}`],
+    ['a', short(a.name)], ['b', b ? short(b.name) : ''], ...(race.swing ? [['swing', 'Swing vs 2022']] : []), ...(race.swing?.vs22 ? [['ptDelta', `${short(race.swing.vs22.ptName)} votes vs 2022`], ['plDelta', `${short(race.swing.vs22.plName).split(' ').pop()} votes vs 2022`], ['net22', `Net for ${short(race.swing.vs22.ptName)}`]] : []), ...(race.swingR1 ? [['swingR1', 'Shift vs 1st round'], ['netR1', `Net for ${short(race.swingR1.votes?.ptName || 'Lula')} vs 1st round`]] : []), ['left', 'Voters left'], ['net', `Projected net for ${short(a.name).split(' ').pop()}`],
   ];
   const val = (r) => (sortCol === 'leader' ? r.leader?.name || '' : r[sortCol] ?? -Infinity);
   rows.sort((p, q) => (val(p) > val(q) ? 1 : val(p) < val(q) ? -1 : 0) * sortDir);
@@ -585,7 +625,7 @@ function renderTable(race, color) {
   const body = rows.map((r) => `<tr>
     <td>${r.name}</td><td>${pct(r.counted, 1)}</td>
     <td class="l">${r.leader ? `<span class="sw" style="background:${color(r.leader.n)}"></span>${short(r.leader.name)}` : '–'}</td>
-    <td>${r.leader ? r.margin.toFixed(1) : '–'}</td><td>${pct(r.a, 1)}</td><td>${pct(r.b, 1)}</td>${race.swing ? `<td>${r.swing == null ? '–' : `${r.swing >= 0 ? '+' : '−'}${Math.abs(r.swing).toFixed(1)}`}</td>` : ''}${race.swing?.vs22 ? ['ptDelta', 'plDelta', 'net22'].map((k) => `<td>${r[k] == null ? '–' : signed(r[k])}</td>`).join('') : ''}
+    <td>${r.leader ? r.margin.toFixed(1) : '–'}</td><td>${pct(r.a, 1)}</td><td>${pct(r.b, 1)}</td>${race.swing ? `<td>${r.swing == null ? '–' : `${r.swing >= 0 ? '+' : '−'}${Math.abs(r.swing).toFixed(1)}`}</td>` : ''}${race.swing?.vs22 ? ['ptDelta', 'plDelta', 'net22'].map((k) => `<td>${r[k] == null ? '–' : signed(r[k])}</td>`).join('') : ''}${race.swingR1 ? `<td>${r.swingR1 == null ? '–' : `${r.swingR1 >= 0 ? '+' : '−'}${Math.abs(r.swingR1).toFixed(1)}`}</td><td>${r.netR1 == null ? '–' : signed(r.netR1)}</td>` : ''}
     <td>${nf.format(r.left)}</td><td>${r.left ? `${r.net >= 0 ? '+' : '−'}${nf.format(Math.abs(Math.round(r.net)))}` : '–'}</td></tr>`).join('');
   $('#units').innerHTML = `${head}<tbody>${body}</tbody>`;
 }
@@ -605,6 +645,7 @@ seg('#map-mode', 'mode', (v) => { mapMode = v; });
 seg('#round', 'round', (v) => { round = Number(v); });
 seg('#subjudice-mode', 'sj', (v) => { subJudice = v; });
 seg('#pt-mode', 'metric', (v) => { vsMetric = v; });
+seg('#pt-base', 'base', (v) => { ptBase = v; });
 seg('#trend-zoom', 'zoom', (v) => { trendZoom = v; });
 $('#units').addEventListener('click', (e) => {
   const th = e.target.closest('th');
@@ -638,11 +679,13 @@ if (DASH.races?.length === 1) $('.tabs').hidden = true;
 if (DASH.round) { $('#round').hidden = true; setRound(DASH.round); }
 
 (async () => {
-  const [g1, g2, c22] = await Promise.all([
+  const [g1, g2, c22, cR1] = await Promise.all([
     fetch('geo/br-uf.json').then((r) => r.json()).catch(() => null),
     fetch('geo/rj-mun.json').then((r) => r.json()).catch(() => null),
     fetch('data/pres2022_curve.json').then((r) => r.json()).catch(() => ({})),
+    fetch('data/pres2026r1_curve.json').then((r) => r.json()).catch(() => []),
   ]);
+  curveR1 = cR1 || [];
   geo.president = g1;
   geo.governor = g2;
   curves2022 = c22 || {};

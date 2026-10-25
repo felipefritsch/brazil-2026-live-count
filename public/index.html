@@ -64,6 +64,7 @@
           <button data-mode="counted" aria-pressed="false">% counted</button>
           <button data-mode="left" aria-pressed="false">Votes left</button>
           <button data-mode="swing" aria-pressed="false">Swing vs 2022</button>
+          <button data-mode="swingR1" aria-pressed="false" hidden>Shift vs 1st round</button>
         </div>
       </div>
       <div id="map"></div>
@@ -105,6 +106,10 @@
         <button data-metric="validDelta" aria-pressed="false">All valid votes</button>
       </div>
     </div>
+    <div class="seg" id="pt-base" hidden style="margin:2px 0 8px">
+      <button data-base="r22" aria-pressed="true">vs 2022 runoff</button>
+      <button data-base="r1" aria-pressed="false">vs 2026 1st round (PL and PT only)</button>
+    </div>
     <p class="sub" id="pt-sub"></p>
     <div id="pt-map"></div>
     <div id="pt-legend" class="legend"></div>
@@ -116,7 +121,7 @@
   </section>
 
   </div>
-  <p class="foot">Results: TSE (resultados.tse.jus.br), polled every 5 minutes (on request only on the runoff page). 2026 presidential count history: urnaaberta.com.br plus this server's own snapshots. 2022 curves and 2022 final results by area: TSE open data. Projections are simple arithmetic on the uncounted electorate, not a forecast model.</p>
+  <p class="foot">Results: TSE (resultados.tse.jus.br), polled every 5 minutes (on request only on the runoff page). 2026 presidential count history: urnaaberta.com.br plus this server's own snapshots. 2022 curves and 2022 final results by area: TSE open data. First-round comparisons count only PL and PT votes. Projections are simple arithmetic on the uncounted electorate, not a forecast model.</p>
 </main>
 
 <div id="tip" class="tip" hidden></div>

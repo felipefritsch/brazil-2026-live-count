@@ -14,6 +14,7 @@ fs.mkdirSync(DATA, { recursive: true });
 const readJson = (file, fallback) => (fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : fallback);
 const core = createCore({
   base: readJson(path.join(DATA, 'base2022.json'), null),
+  baseR1: readJson(path.join(DATA, 'base2026r1.json'), null),
   snapshots: fs.existsSync(SNAPSHOTS)
     ? fs.readFileSync(SNAPSHOTS, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l))
     : [],
