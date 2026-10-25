@@ -612,11 +612,12 @@ function renderTable(race, color) {
     return {
       u, name: title(u.name), counted: u.sectionsPct, leader: u.votesValid ? u.cands[0] : null,
       margin: u.votesValid ? u.cands[0].pct - (u.cands[1]?.pct || 0) : 0,
+      leadVotes: u.votesValid ? u.cands[0].votes - (u.cands[1]?.votes || 0) : 0,
       a: sh[a.n] || 0, b: sh[b?.n] || 0, swing: u.swing ?? null, swingR1: u.swingR1 ?? null, netR1: u.vsR1?.net ?? null, ptDelta: u.vs22?.ptDelta ?? null, plDelta: u.vs22?.plDelta ?? null, net22: u.vs22?.net ?? null, left: u.electorateLeft, net: (g[a.n] || 0) - (g[b?.n] || 0),
     };
   });
   const cols = [
-    ['name', 'Area', 'l'], ['counted', '% counted'], ['leader', 'Leading', 'l'], ['margin', 'Lead (pts)'],
+    ['name', 'Area', 'l'], ['counted', '% counted'], ['leader', 'Leading', 'l'], ['margin', 'Lead (pts)'], ['leadVotes', 'Lead (votes)'],
     ['a', short(a.name)], ['b', b ? short(b.name) : ''], ...(race.swing ? [['swing', 'Swing vs 2022']] : []), ...(race.swing?.vs22 ? [['ptDelta', `${short(race.swing.vs22.ptName)} votes vs 2022`], ['plDelta', `${short(race.swing.vs22.plName).split(' ').pop()} votes vs 2022`], ['net22', `Net for ${short(race.swing.vs22.ptName)}`]] : []), ...(race.swingR1 ? [['swingR1', 'Shift vs 1st round'], ['netR1', `Net for ${short(race.swingR1.votes?.ptName || 'Lula')} vs 1st round`]] : []), ['left', 'Voters left'], ['net', `Projected net for ${short(a.name).split(' ').pop()}`],
   ];
   const val = (r) => (sortCol === 'leader' ? r.leader?.name || '' : r[sortCol] ?? -Infinity);
@@ -625,9 +626,27 @@ function renderTable(race, color) {
   const body = rows.map((r) => `<tr>
     <td>${r.name}</td><td>${pct(r.counted, 1)}</td>
     <td class="l">${r.leader ? `<span class="sw" style="background:${color(r.leader.n)}"></span>${short(r.leader.name)}` : '–'}</td>
-    <td>${r.leader ? r.margin.toFixed(1) : '–'}</td><td>${pct(r.a, 1)}</td><td>${pct(r.b, 1)}</td>${race.swing ? `<td>${r.swing == null ? '–' : `${r.swing >= 0 ? '+' : '−'}${Math.abs(r.swing).toFixed(1)}`}</td>` : ''}${race.swing?.vs22 ? ['ptDelta', 'plDelta', 'net22'].map((k) => `<td>${r[k] == null ? '–' : signed(r[k])}</td>`).join('') : ''}${race.swingR1 ? `<td>${r.swingR1 == null ? '–' : `${r.swingR1 >= 0 ? '+' : '−'}${Math.abs(r.swingR1).toFixed(1)}`}</td><td>${r.netR1 == null ? '–' : signed(r.netR1)}</td>` : ''}
+    <td>${r.leader ? r.margin.toFixed(1) : '–'}</td><td>${r.leader ? nf.format(r.leadVotes) : '–'}</td><td>${pct(r.a, 1)}</td><td>${pct(r.b, 1)}</td>${race.swing ? `<td>${r.swing == null ? '–' : `${r.swing >= 0 ? '+' : '−'}${Math.abs(r.swing).toFixed(1)}`}</td>` : ''}${race.swing?.vs22 ? ['ptDelta', 'plDelta', 'net22'].map((k) => `<td>${r[k] == null ? '–' : signed(r[k])}</td>`).join('') : ''}${race.swingR1 ? `<td>${r.swingR1 == null ? '–' : `${r.swingR1 >= 0 ? '+' : '−'}${Math.abs(r.swingR1).toFixed(1)}`}</td><td>${r.netR1 == null ? '–' : signed(r.netR1)}</td>` : ''}
     <td>${nf.format(r.left)}</td><td>${r.left ? `${r.net >= 0 ? '+' : '−'}${nf.format(Math.abs(Math.round(r.net)))}` : '–'}</td></tr>`).join('');
   $('#units').innerHTML = `${head}<tbody>${body}</tbody>`;
+  freezeColumns($('#units'), 5);
+}
+
+// Pin the first n columns while the table scrolls sideways. On narrow screens where they would
+// take most of the width, pin only the area name.
+function freezeColumns(table, n) {
+  const ths = [...table.querySelectorAll('thead th')];
+  const wrap = table.parentElement.clientWidth;
+  const widths = ths.map((th) => th.getBoundingClientRect().width);
+  const k = d3.sum(widths.slice(0, n)) <= wrap * 0.65 ? n : 1;
+  const lefts = widths.slice(0, k).map((w, i) => d3.sum(widths.slice(0, i)));
+  table.querySelectorAll('tr').forEach((tr) => {
+    [...tr.children].slice(0, k).forEach((cell, i) => {
+      cell.classList.add('frz');
+      cell.classList.toggle('frz-last', i === k - 1);
+      cell.style.left = `${lefts[i]}px`;
+    });
+  });
 }
 
 // ---------- events ----------

@@ -87,7 +87,7 @@ svg .lbl { fill: var(--ink); }
 .unit:hover { stroke: var(--ink); stroke-width: 1.5; }
 
 .tablewrap { overflow-x: auto; max-height: 520px; overflow-y: auto; }
-table { border-collapse: collapse; width: 100%; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+table { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 13.5px; font-variant-numeric: tabular-nums; }
 th, td { padding: 6px 10px; text-align: right; border-bottom: 1px solid var(--grid); white-space: nowrap; }
 th:first-child, td:first-child, th.l, td.l { text-align: left; }
 th { position: sticky; top: 0; background: var(--surface); color: var(--ink2); font-weight: 600; cursor: pointer; user-select: none; }
@@ -101,3 +101,8 @@ td .sw { display: inline-block; margin-right: 6px; }
 
 .cols2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 24px; }
 [hidden] { display: none !important; }
+
+/* Pinned leading columns in the areas table */
+td.frz, th.frz { position: sticky; background: var(--surface); z-index: 1; }
+th.frz { z-index: 3; }
+.frz-last { box-shadow: inset -1px 0 0 var(--axis); }
