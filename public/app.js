@@ -620,6 +620,8 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => stat
 
 // countdown to the server's next poll; reload shortly after it runs
 setInterval(() => {
+  // Manual-only pages fetch once on open and then only when "Update now" is pressed.
+  if (DASH.manual) { $('#st-next').textContent = 'Updates only when you press Update now'; return; }
   if (!state?.nextPollAt) return;
   const ms = new Date(state.nextPollAt).getTime() - Date.now();
   if (ms > 0) {
