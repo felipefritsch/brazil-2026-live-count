@@ -22,7 +22,11 @@ js += `
 const KEY = 'count-snapshots-v1';
 let saved = [];
 try { saved = JSON.parse(localStorage.getItem(KEY) || '[]'); } catch { /* storage unavailable */ }
+const DASH = window.DASH || {};
 window.Backend = __mods.core.createCore({
+  keys: DASH.races,
+  forceRound: DASH.round,
+  onlyActive: Boolean(DASH.round),
   base: ${base},
   snapshots: saved,
   saveSnapshot: (snap, all) => { try { localStorage.setItem(KEY, JSON.stringify(all.slice(-800))); } catch { /* ignore */ } },
@@ -32,4 +36,13 @@ window.Backend = __mods.core.createCore({
 fs.writeFileSync(path.join(out, 'backend.js'), js);
 const html = path.join(out, 'index.html');
 fs.writeFileSync(html, fs.readFileSync(html, 'utf8').replace('<script src="app.js"></script>', '<script src="backend.js"></script>\n<script src="app.js"></script>'));
+
+// President-only page for the 25 October runoff, sharing every asset with the main page.
+const runoff = fs.readFileSync(html, 'utf8')
+  .replace('<head>', '<head>\n<base href="../">')
+  .replace(/<title>.*?<\/title>/, '<title>Brazil 2026 Presidential Runoff</title>')
+  .replace('<h1>Brazil 2026 · live count</h1>', '<h1>Brazil 2026 · presidential runoff</h1>')
+  .replace('<script src="backend.js"></script>', '<script>window.DASH = { races: [\'president\'], round: 2 };</script>\n<script src="backend.js"></script>');
+fs.mkdirSync(path.join(out, 'runoff'), { recursive: true });
+fs.writeFileSync(path.join(out, 'runoff', 'index.html'), runoff);
 console.log('built docs/', fs.readdirSync(out));

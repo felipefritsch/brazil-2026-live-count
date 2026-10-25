@@ -10,7 +10,9 @@ let round = null;
 let subJudice = 'in';
 let vsMetric = 'net';
 const geo = {};
-let raceKey = 'president';
+// Optional page config (set before the scripts load): { races: ['president'], round: 2 }.
+const DASH = window.DASH || {};
+let raceKey = DASH.races?.[0] || 'president';
 let mapMode = 'leader';
 let trendZoom = 'full';
 let sortCol = 'left';
@@ -83,7 +85,7 @@ async function load(manual = false) {
       data = await res.json();
     }
     state = data;
-    if (round === null) setRound(data.activeRound);
+    if (round === null) setRound(DASH.round || data.activeRound);
     state.clientError = null;
     state.throttledAt = data.throttled ? Date.now() : 0;
   } catch (e) {
@@ -114,8 +116,19 @@ const signedBig = (v) => `${v >= 0 ? '+' : '−'}${big(Math.abs(v))}`;
 function render() {
   const race = currentRace();
   pres2022 = curves2022[round] || [];
-  $('#empty').hidden = Boolean(race);
-  $('#content').hidden = !race;
+  $('#fifty-label').textContent = round === 2 ? '50% (wins the runoff)' : '50% (first-round win)';
+  // Feed published but nothing counted yet (before polls close).
+  const waiting = race && race.total.sectionsPct === 0 && !race.total.final;
+  $('#empty').hidden = Boolean(race) && !waiting;
+  $('#content').hidden = !race || waiting;
+  if (waiting) {
+    $('#empty-title').textContent = 'Counting has not started yet';
+    $('#empty-text').textContent = `${race.total.cands.map((c) => title(c.name)).join(' vs ')}. Polls close at 17:00 Brasília time and TSE starts publishing the count shortly after. This page checks every 5 minutes, or press Update now.`;
+    $('#st-counted').textContent = '0% of sections counted';
+    $('#st-times').textContent = '';
+    $('#progress-fill').style.width = '0';
+    return;
+  }
   if (!race) {
     const what = raceKey === 'president' ? 'presidential' : 'Rio de Janeiro governor';
     if (round === 2) {
@@ -226,10 +239,16 @@ function renderTiles(race) {
     const lead = [...pr.cands].sort((x, y) => y.pct - x.pct)[0];
     const leadName = short(t.cands.find((c) => c.n === lead.n).name);
     const lb = pr.band?.[lead.n] || [lead.pct, lead.pct];
-    let verdict = 'Too close to 50% to call';
-    if (lb[0] > 50) verdict = 'First-round win on course';
-    else if (lb[1] < 50) verdict = 'Runoff on course';
-    tiles.push({ k: 'First round or runoff', v: verdict, d: `${leadName} projected at ${pct(lead.pct, 1)}; 50% of valid votes wins outright` });
+    if (round === 2) {
+      // Two candidates: the leader is always at or above 50%, so the question is whether the range clears it.
+      const verdict = lb[0] > 50 ? `${leadName} on course to win` : 'Too close to call';
+      tiles.push({ k: 'Who wins', v: verdict, d: `${leadName} projected at ${pct(lead.pct, 1)}, ${pct(lb[0], 1)} if the remaining vote shifts 3 points against them` });
+    } else {
+      let verdict = 'Too close to 50% to call';
+      if (lb[0] > 50) verdict = 'First-round win on course';
+      else if (lb[1] < 50) verdict = 'Runoff on course';
+      tiles.push({ k: 'First round or runoff', v: verdict, d: `${leadName} projected at ${pct(lead.pct, 1)}; 50% of valid votes wins outright` });
+    }
     tiles.push({
       k: 'Lead now vs. votes still out',
       v: `${big(a.votes - b.votes)} vs ${big(pr.remainingValid)}`,
@@ -611,6 +630,10 @@ setInterval(() => {
     if (ms < (window.Backend ? 0 : -12000)) load();
   }
 }, 1000);
+
+// Single-race / fixed-round pages hide the switches they do not need.
+if (DASH.races?.length === 1) $('.tabs').hidden = true;
+if (DASH.round) { $('#round').hidden = true; setRound(DASH.round); }
 
 (async () => {
   const [g1, g2, c22] = await Promise.all([
