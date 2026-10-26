@@ -84,7 +84,10 @@ async function load(manual = false) {
   btn.textContent = manual ? 'Updating…' : 'Update now';
   try {
     let data;
-    if (window.Backend) {
+    if (DASH.final) {
+      // Frozen site: final results saved after the count ended; nothing is fetched from TSE.
+      data = await fetch('data/final.json').then((r) => r.json());
+    } else if (window.Backend) {
       // Static site: this browser talks to TSE itself.
       const throttled = manual ? await Backend.refresh() : (await Backend.poll(), false);
       data = { ...Backend.payload(), throttled };
@@ -153,7 +156,11 @@ function render() {
   }
   if (!race) {
     const what = raceKey === 'president' ? 'presidential' : 'Rio de Janeiro governor';
-    if (round === 2) {
+    const winner = state.rounds[1]?.races?.[raceKey]?.total.cands.find((c) => c.elected);
+    if (round === 2 && DASH.final && winner) {
+      $('#empty-title').textContent = `No runoff for the ${what} race`;
+      $('#empty-text').textContent = `${title(winner.name)} won outright in the first round with ${pct(state.rounds[1].races[raceKey].total.cands.find((c) => c.elected).pct)} of valid votes. See the 1st round tab.`;
+    } else if (round === 2) {
       const started = state.activeRound === 2;
       $('#empty-title').textContent = started ? `No second-round results for the ${what} race` : 'The second round is on 25 October';
       $('#empty-text').textContent = started
@@ -192,7 +199,9 @@ function renderStatus(race) {
   $('#st-counted').textContent = `${pct(t.sectionsPct)} of sections counted`;
   $('#progress-fill').style.width = `${t.sectionsPct}%`;
   const fetched = state.fetchedAt ? new Date(state.fetchedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '–';
-  $('#st-times').textContent = `TSE data as of ${t.counted.slice(11, 16)} Brasília · fetched ${fetched}`;
+  $('#st-times').textContent = DASH.final
+    ? `Final result, TSE ${t.counted.slice(0, 5)} ${t.counted.slice(11, 16)} Brasília`
+    : `TSE data as of ${t.counted.slice(11, 16)} Brasília · fetched ${fetched}`;
   const badge = $('#st-badge');
   let msg = '';
   if (state.clientError) msg = state.clientError;
@@ -209,7 +218,10 @@ function renderCands(race, color) {
   const [a, b] = t.cands;
   const proj = Object.fromEntries(race.projection.cands.map((c) => [c.n, c]));
   const band = race.projection.band || {};
-  $('#headline').textContent = b
+  const elected = t.final && t.cands.find((c) => c.elected);
+  $('#headline').textContent = elected
+    ? `${title(elected.name)} elected with ${pct(elected.pct)} of valid votes${b ? `, ${nf.format(a.votes - b.votes)} votes ahead of ${short(b.name)}` : ''}`
+    : b
     ? `${short(a.name)} leads ${short(b.name)} by ${(a.pct - b.pct).toFixed(2)} points (${nf.format(a.votes - b.votes)} votes)`
     : race.title;
   const shown = t.cands.filter((c, i) => i < 6 || c.pct >= 1);
@@ -291,7 +303,7 @@ function renderTiles(race) {
     }
   }
   let note = `Projection method: each area's uncounted voters are assumed to turn out and vote like the voters already counted in that same area (${raceKey === 'president' ? 'state by state' : 'municipality by municipality'}). It is weakest when the uncounted sections inside an area differ from the counted ones, for example capital versus interior.`;
-  if (raceKey === 'president') {
+  if (raceKey === 'president' && !t.final) {
     const pt = t.cands.find((c) => c.n === '13');
     const pl = t.cands.find((c) => c.n === '22');
     const then = at2022(t.sectionsPct);
@@ -306,7 +318,7 @@ function renderTiles(race) {
       });
     }
   }
-  if (raceKey === 'president' && round === 2 && curveR1.length) {
+  if (raceKey === 'president' && round === 2 && curveR1.length && !t.final) {
     const pt = t.cands.find((c) => c.n === '13');
     const pl = t.cands.find((c) => c.n === '22');
     const then = atCurve(curveR1, t.sectionsPct);
@@ -794,6 +806,7 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => stat
 
 // countdown to the server's next poll; reload shortly after it runs
 setInterval(() => {
+  if (DASH.final) { $('#st-next').textContent = 'Final results · this page no longer updates'; return; }
   // Manual-only pages fetch once on open and then only when "Update now" is pressed.
   if (DASH.manual) { $('#st-next').textContent = 'Updates only when you press Update now'; return; }
   if (!state?.nextPollAt) return;
@@ -810,6 +823,7 @@ setInterval(() => {
 // Single-race / fixed-round pages hide the switches they do not need.
 if (DASH.races?.length === 1) $('.tabs').hidden = true;
 if (DASH.round) { $('#round').hidden = true; setRound(DASH.round); }
+if (DASH.final) $('#refresh').hidden = true;
 
 (async () => {
   const [g1, g2, c22, cR1] = await Promise.all([

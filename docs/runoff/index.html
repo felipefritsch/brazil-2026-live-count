@@ -124,13 +124,12 @@
   </section>
 
   </div>
-  <p class="foot">Results: TSE (resultados.tse.jus.br), polled every 5 minutes (on request only on the runoff page). 2026 presidential count history: urnaaberta.com.br plus this server's own snapshots. 2022 curves and 2022 final results by area: TSE open data. First-round comparisons count only PL and PT votes. Projections are simple arithmetic on the uncounted electorate, not a forecast model.</p>
+  <p class="foot">Final results as published by TSE (resultados.tse.jus.br). The count is complete and this page no longer updates. 2026 presidential count history: urnaaberta.com.br and this site's own snapshots. 2022 curves and results by area: TSE open data. First-round comparisons count only PL and PT votes.</p>
 </main>
 
 <div id="tip" class="tip" hidden></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
-<script>window.DASH = { races: ['president'], round: 2, manual: true, subStates: ['sp', 'mg'] };</script>
-<script src="backend.js"></script>
+<script>window.DASH = { races: ['president'], round: 2, final: true, subStates: ['sp', 'mg'] };</script>
 <script src="app.js"></script>
 </body>
 </html>

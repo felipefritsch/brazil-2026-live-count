@@ -1,0 +1,71 @@
+state weighted R^2 0.951
+region weighted R^2 0.953
+national weighted R^2 0.972
+bridge check 4410171 vs 4410171.0
+national 1 rows
+regions 6 rows
+states 28 rows
+municipalities 5564 rows
+transfers 5 rows
+bridge 8 rows
+{
+ "name": "Brazil",
+ "electorate": 158745502,
+ "pt1": 53879538,
+ "pl1": 56104503,
+ "others1": 9316747,
+ "valid1": 119300788,
+ "pt2": 64216114,
+ "pl2": 59805943,
+ "valid2": 124022057,
+ "lula_2way_1": 48.989,
+ "lula_2": 51.778,
+ "turnout1": 78.916,
+ "turnout2": 80.742,
+ "others_share1": 7.809,
+ "bn1": 5975047,
+ "bn2": 4151891,
+ "shift": 2.789,
+ "lula_gain": 10336576,
+ "flavio_gain": 3701440,
+ "net_lula": 6635136,
+ "turnout_change": 1.826,
+ "gap1": -2224965,
+ "gap2": 4410171,
+ "lula_2022": 50.902,
+ "counted2": 99.94,
+ "municipalities": 5757,
+ "munis_n": 5564,
+ "munis_toward_lula": 5402,
+ "munis_flipped": 211,
+ "turnaround": 6635136,
+ "others_to_lula": 0.5928,
+ "others_to_lula_lo": 0.4947,
+ "others_to_lula_hi": 0.5928,
+ "others_voters": 9316747,
+ "others_net_lula": 1533637,
+ "bn_net_lula": 3504712,
+ "abst_net_lula": 1338289,
+ "new_net_lula": 4843001,
+ "new_net_lula_lo": 4843001,
+ "new_net_lula_hi": 6864597,
+ "pool": 14038016,
+ "lula_share_pool": 0.7363,
+ "bn_drop": 1823156,
+ "extra_voters": 2898693,
+ "collected_at": "2026-10-26T00:58:53.790Z"
+}
+North 47.6 -> 50.002 shift 2.402 net 459204 turnout -1.825 others->lula 0.6512
+Northeast 67.395 -> 69.369 shift 1.974 net 2550810 turnout 1.853 others->lula 0.7675
+Centre-West 36.597 -> 39.987 shift 3.39 net 300532 turnout 1.653 others->lula 0.4645
+Southeast 43.586 -> 47.23 shift 3.644 net 2845396 turnout 2.387 others->lula 0.6132
+South 34.238 -> 37.424 shift 3.186 net 466328 turnout 2.266 others->lula 0.3461
+Abroad 52.238 -> 53.632 shift 1.394 net 12866 turnout 3.331 others->lula 0.8691
+First-round gap                            -2,224,965
+Lula voters                                  -720,505
+Flávio Bolsonaro voters                       918,234
+Other candidates’ voters                    1,533,637
+First-round blank or null                   3,504,712
+First-round non-voters                      1,338,289
+Not explained by the model                     60,769
+Runoff gap                                  4,410,171

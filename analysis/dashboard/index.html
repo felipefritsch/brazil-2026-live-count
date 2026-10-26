@@ -1,0 +1,414 @@
+<style>
+.lc { display: grid; gap: var(--cds-gap-xl); font-family: var(--font-anthropic-sans); color: var(--color-fg); }
+.lc-head h1 { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); margin: 0 0 var(--cds-gap-sm); text-wrap: balance; }
+.lc-take { font-size: var(--cds-font-size-body); color: var(--color-fg-muted); max-width: 70ch; margin: 0; line-height: 1.5; }
+.lc-take b, .lc-para b, .lc-figs b { font-weight: 600; color: var(--color-fg); font-variant-numeric: tabular-nums; }
+.lc-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); gap: var(--cds-gap-md); }
+.lc-tile { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-lg); display: grid; gap: var(--cds-gap-xs); align-content: start; }
+.lc-tile .k { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+.lc-tile .v { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); font-variant-numeric: tabular-nums; }
+.lc-tile .d { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); font-variant-numeric: tabular-nums; }
+.lc-sec { display: grid; gap: var(--cds-gap-md); }
+.lc-sec > h2 { font-size: var(--cds-font-size-heading); font-weight: var(--cds-font-weight-medium); margin: 0; }
+.lc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: var(--cds-gap-md); }
+.lc-card { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-lg); display: grid; gap: var(--cds-gap-sm); align-content: start; min-width: 0; }
+.lc-card h3 { font-size: var(--cds-font-size-heading); font-weight: var(--cds-font-weight-medium); margin: 0; text-wrap: balance; }
+.lc-note { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin: 0; max-width: 75ch; line-height: 1.5; }
+.lc-chart { position: relative; min-height: 260px; }
+.lc-chart svg text { font-size: var(--cds-font-size-caption); fill: var(--color-fg-muted); font-variant-numeric: tabular-nums; }
+.lc-chart svg text.lbl { fill: var(--color-fg); }
+.lc-legend { display: flex; flex-wrap: wrap; gap: var(--cds-gap-xs) var(--cds-gap-md); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); align-items: center; }
+.lc-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+.lc-legend .ramp { width: 96px; height: 10px; border-radius: 3px; margin: 0 6px; }
+.lc-seg { display: flex; flex-wrap: wrap; gap: var(--cds-gap-xs); }
+.lc-seg button { font: inherit; font-size: var(--cds-font-size-caption); border: 1px solid var(--color-border-line); background: transparent; color: var(--color-fg-muted); padding: 4px 10px; border-radius: var(--cds-radius); cursor: pointer; }
+.lc-seg button[aria-pressed="true"] { background: var(--color-fg); color: var(--color-bg); border-color: var(--color-fg); }
+.lc-tablewrap { overflow-x: auto; }
+.lc table { border-collapse: collapse; width: 100%; font-size: var(--cds-font-size-caption); font-variant-numeric: tabular-nums; }
+.lc th, .lc td { padding: 6px 8px; text-align: right; border-bottom: 1px solid var(--color-border-line); white-space: nowrap; }
+.lc th:first-child, .lc td:first-child { text-align: left; }
+.lc th { color: var(--color-fg-muted); font-weight: 500; }
+.lc-tip { position: absolute; pointer-events: none; background: var(--cds-surface-popover); border: 1px solid var(--cds-border); border-radius: var(--cds-radius); box-shadow: var(--cds-shadow-popover); padding: var(--cds-pad-xs) var(--cds-pad-sm); font-size: var(--cds-font-size-caption); font-variant-numeric: tabular-nums; z-index: 5; max-width: 260px; }
+.lc-tip .t { color: var(--cds-text-secondary); margin-bottom: 2px; }
+.lc-final { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: var(--cds-gap-lg); align-items: start; }
+@media (max-width: 760px) { .lc-final { grid-template-columns: minmax(0, 1fr); } }
+.lc-para { font-size: var(--cds-font-size-body); line-height: 1.65; margin: 0; max-width: 72ch; }
+.lc-figs { display: grid; gap: var(--cds-gap-sm); }
+.lc-figs .row { display: flex; justify-content: space-between; gap: var(--cds-gap-md); font-size: var(--cds-font-size-caption); border-bottom: 1px solid var(--color-border-line); padding-bottom: 6px; }
+.lc-figs .row span:first-child { color: var(--color-fg-muted); }
+[data-dash-source-state=empty] { color: transparent; }
+[data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
+.lc-fail { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 120px; color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); }
+.lc-fail::before { content: ""; width: .375rem; height: .375rem; border-radius: 50%; background: var(--color-bad); }
+</style>
+
+<div class="lc">
+  <header class="lc-head" id="top">
+    <h1>Lula's runoff comeback</h1>
+    <p class="lc-take">Lula turned a <b class="dash-skeleton" data-source="national" data-field="gap1" data-where="name=Brazil">—</b>-vote first-round deficit into a <b class="dash-skeleton" data-source="national" data-field="gap2" data-where="name=Brazil">—</b>-vote runoff win, a turnaround of <b class="dash-skeleton" data-source="national" data-field="turnaround" data-where="name=Brazil">—</b> votes. Runoff count: <b class="dash-skeleton" data-source="national" data-field="counted2" data-where="name=Brazil">—</b> of sections.</p>
+  </header>
+
+  <div class="lc-tiles" id="headline">
+    <div class="lc-tile"><span class="k">Lula, runoff</span><span class="v dash-skeleton" data-source="national" data-field="lula_2" data-where="name=Brazil">—</span><span class="d">of valid votes · <span data-source="national" data-field="lula_2022" data-where="name=Brazil">—</span> in the 2022 runoff</span></div>
+    <div class="lc-tile"><span class="k">Lula, 1st round (vs Flávio only)</span><span class="v dash-skeleton" data-source="national" data-field="lula_2way_1" data-where="name=Brazil">—</span><span class="d">counting only Lula and Flávio Bolsonaro votes</span></div>
+    <div class="lc-tile"><span class="k">Turnout change</span><span class="v dash-skeleton" data-source="national" data-field="turnout_change" data-where="name=Brazil">—</span><span class="d"><span data-source="national" data-field="turnout1" data-where="name=Brazil">—</span> in the 1st round, <span data-source="national" data-field="turnout2" data-where="name=Brazil">—</span> in the runoff</span></div>
+    <div class="lc-tile"><span class="k">Other candidates' voters who chose Lula</span><span class="v dash-skeleton" data-source="national" data-field="others_to_lula" data-where="name=Brazil">—</span><span class="d">estimated, of the <span data-source="national" data-field="others_voters" data-where="name=Brazil">—</span> first-round voters for other candidates, among those who picked a side</span></div>
+  </div>
+
+  <section class="lc-sec" id="bridge-sec">
+    <h2>Where the turnaround came from</h2>
+    <div class="lc-card">
+      <h3 id="bridge-title">From a first-round deficit to a runoff win, in votes</h3>
+      <p class="lc-note">Each bar is one group of first-round voters and how much it moved the Lula-minus-Flávio gap. The first and last bars are counted results. The bars between are estimated by fitting each state’s municipal results (ecological regression), so read them as approximate: they show where gains happened, not which individuals switched.</p>
+      <div class="lc-chart" id="bridge" data-source="bridge"></div>
+    </div>
+  </section>
+
+  <section class="lc-sec" id="transfers-sec">
+    <h2>Where each first-round group went</h2>
+    <div class="lc-card">
+      <h3>Estimated runoff choice of each first-round group</h3>
+      <p class="lc-note">Share of each group's voters who voted Lula, Flávio Bolsonaro, blank or null, or stayed home in the runoff. Estimated by fitting runoff results in every municipality as a mix of first-round results; hover for the range across three fits (state by state, region by region, national).</p>
+      <div class="lc-chart" id="transfers" data-source="transfers" style="min-height:300px"></div>
+      <div class="lc-legend" id="transfers-legend" data-source="transfers"></div>
+    </div>
+  </section>
+
+  <section class="lc-sec" id="regions-sec">
+    <h2>Regional gains</h2>
+    <div class="lc-grid">
+      <div class="lc-card">
+        <h3>Shift toward Lula since the 1st round, by region</h3>
+        <p class="lc-note">Change in Lula's share of the two-candidate vote, in points, from the first round (Lula and Flávio votes only) to the runoff.</p>
+        <div class="lc-chart" id="regions-chart" data-source="regions" style="min-height:220px"></div>
+      </div>
+      <div class="lc-card">
+        <h3>Votes gained in each region</h3>
+        <p class="lc-note">Runoff votes minus first-round votes for each candidate, and turnout change.</p>
+        <div class="lc-tablewrap">
+          <table id="regions-table" data-source="regions" data-row-key="name">
+            <thead><tr><th data-field="name">Region</th><th data-field="lula_2way_1">Lula 1st (2-way)</th><th data-field="lula_2">Lula runoff</th><th data-field="lula_gain">Lula gain</th><th data-field="flavio_gain">Flávio gain</th><th data-field="net_lula">Net for Lula</th><th data-field="turnout_change">Turnout chg</th><th data-field="others_to_lula">Others → Lula</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="lc-sec" id="states-sec">
+    <h2>State by state</h2>
+    <div class="lc-card">
+      <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:var(--cds-gap-sm);align-items:center">
+        <h3 id="map-title">Shift toward Lula since the 1st round</h3>
+        <div class="lc-seg" id="map-mode"><button data-m="shift" aria-pressed="true">vs 1st round</button><button data-m="vs_2022" aria-pressed="false">vs 2022 runoff</button><button data-m="net_lula" aria-pressed="false">Net votes for Lula</button></div>
+      </div>
+      <p class="lc-note" id="map-note"></p>
+      <div class="lc-grid">
+        <div class="lc-chart" id="map" data-source="states br_states" style="min-height:340px"></div>
+        <div class="lc-tablewrap" style="max-height:420px;overflow:auto">
+          <table id="states-table" data-source="states" data-row-key="name">
+            <thead><tr><th data-field="name">State</th><th data-field="lula_2way_1">Lula 1st (2-way)</th><th data-field="lula_2">Lula runoff</th><th data-field="shift">Shift</th><th data-field="vs_2022">vs 2022</th><th data-field="net_lula">Net for Lula</th><th data-field="turnout_change">Turnout chg</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="lc-legend" id="map-legend" data-source="states"></div>
+    </div>
+  </section>
+
+  <section class="lc-sec" id="munis-sec">
+    <h2>Municipalities</h2>
+    <div class="lc-grid">
+      <div class="lc-card">
+        <h3>Where other candidates did well, Lula gained more</h3>
+        <p class="lc-note">Each dot is a municipality: first-round share of valid votes for candidates other than Lula and Flávio, against the runoff shift toward Lula. Dot size follows the electorate; the line is the electorate-weighted fit.</p>
+        <div class="lc-chart" id="scatter" data-source="municipalities" style="min-height:320px"></div>
+        <div class="lc-legend" id="scatter-legend" data-source="municipalities"></div>
+      </div>
+      <div class="lc-card">
+        <h3>Turnout rose most where Lula gained most</h3>
+        <p class="lc-note">Turnout change from the first round to the runoff against the shift toward Lula, by state. Bubble size follows the electorate.</p>
+        <div class="lc-chart" id="turnout" data-source="states" style="min-height:320px"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="lc-sec" id="summary">
+    <h2>What drove the comeback</h2>
+    <div class="lc-final">
+      <p class="lc-para" id="para">Lula’s comeback was won mostly on ballots that were not cast for either finalist in the first round, more than on converts. Between the two rounds he gained <b data-source="national" data-field="lula_gain" data-where="name=Brazil">—</b> votes to Flávio Bolsonaro’s <b data-source="national" data-field="flavio_gain" data-where="name=Brazil">—</b>, turning a <b data-source="national" data-field="gap1" data-where="name=Brazil">—</b>-vote deficit into a <b data-source="national" data-field="gap2" data-where="name=Brazil">—</b>-vote lead. That is the first time since runoffs began in 1989 that the first-round runner-up has won. The <b data-source="national" data-field="pool" data-where="name=Brazil">—</b> extra votes for the two finalists had three sources: the <b data-source="national" data-field="others_voters" data-where="name=Brazil">—</b> first-round voters for other candidates, <b data-source="national" data-field="bn_drop" data-where="name=Brazil">—</b> fewer blank or null ballots, and <b data-source="national" data-field="extra_voters" data-where="name=Brazil">—</b> more voters as turnout rose from <b data-source="national" data-field="turnout1" data-where="name=Brazil">—</b> to <b data-source="national" data-field="turnout2" data-where="name=Brazil">—</b>. Lula took <b data-source="national" data-field="lula_share_pool" data-where="name=Brazil">—</b> of that pool. Other candidates’ voters leaned only modestly his way: an estimated <b data-source="national" data-field="others_to_lula" data-where="name=Brazil">—</b> of those who picked a side chose Lula (<b data-source="national" data-field="others_to_lula_lo" data-where="name=Brazil">—</b> to <b data-source="national" data-field="others_to_lula_hi" data-where="name=Brazil">—</b> depending on how the model is fitted), worth about <b data-source="national" data-field="others_net_lula" data-where="name=Brazil">—</b> net votes. The bigger part of his advantage, roughly <b data-source="national" data-field="new_net_lula" data-where="name=Brazil">—</b> net, came from places where first-round blank or null voters and non-voters turned out for him, although municipal data shows where this happened rather than which individuals switched. The swing was broad, with Lula improving in <b data-source="national" data-field="munis_toward_lula" data-where="name=Brazil">—</b> of <b data-source="national" data-field="munis_n" data-where="name=Brazil">—</b> municipalities, but it was largest outside his northeastern base. The Southeast alone gave him <b data-source="regions" data-field="net_lula" data-where="name=Southeast">—</b> net votes, led by São Paulo (<b data-source="states" data-field="net_lula" data-where="name=São Paulo">—</b>), Minas Gerais (<b data-source="states" data-field="net_lula" data-where="name=Minas Gerais">—</b>) and Rio de Janeiro (<b data-source="states" data-field="net_lula" data-where="name=Rio de Janeiro">—</b>, the largest shift at <b data-source="states" data-field="shift" data-where="name=Rio de Janeiro">—</b>). The Northeast, already at <b data-source="regions" data-field="lula_2way_1" data-where="name=Northeast">—</b>, moved <b data-source="regions" data-field="shift" data-where="name=Northeast">—</b> and added <b data-source="regions" data-field="net_lula" data-where="name=Northeast">—</b>. His final <b data-source="national" data-field="lula_2" data-where="name=Brazil">—</b> edges his 2022 runoff share of <b data-source="national" data-field="lula_2022" data-where="name=Brazil">—</b>, on a different map: stronger in Rio de Janeiro (<b data-source="states" data-field="vs_2022" data-where="name=Rio de Janeiro">—</b> on 2022) and São Paulo (<b data-source="states" data-field="vs_2022" data-where="name=São Paulo">—</b>), weaker in Bahia (<b data-source="states" data-field="vs_2022" data-where="name=Bahia">—</b>) and Ceará (<b data-source="states" data-field="vs_2022" data-where="name=Ceará">—</b>).</p>
+      <div class="lc-card lc-figs" id="figs"><h3>Key figures</h3><div class="row"><span>Lula, votes gained</span><b data-source="national" data-field="lula_gain" data-where="name=Brazil">—</b></div><div class="row"><span>Flávio Bolsonaro, votes gained</span><b data-source="national" data-field="flavio_gain" data-where="name=Brazil">—</b></div><div class="row"><span>Extra votes for the two finalists</span><b data-source="national" data-field="pool" data-where="name=Brazil">—</b></div><div class="row"><span>Lula’s share of them</span><b data-source="national" data-field="lula_share_pool" data-where="name=Brazil">—</b></div><div class="row"><span>Other candidates’ voters choosing Lula (est.)</span><b data-source="national" data-field="others_to_lula" data-where="name=Brazil">—</b></div><div class="row"><span>Net from other candidates’ voters (est.)</span><b data-source="national" data-field="others_net_lula" data-where="name=Brazil">—</b></div><div class="row"><span>Net from 1st-round blank, null and non-voters (est.)</span><b data-source="national" data-field="new_net_lula" data-where="name=Brazil">—</b></div><div class="row"><span>Turnout change</span><b data-source="national" data-field="turnout_change" data-where="name=Brazil">—</b></div><div class="row"><span>Municipalities moving toward Lula</span><b data-source="national" data-field="munis_toward_lula" data-where="name=Brazil">—</b></div><div class="row"><span>Municipalities flipped to Lula</span><b data-source="national" data-field="munis_flipped" data-where="name=Brazil">—</b></div><div class="row"><span>Southeast, net for Lula</span><b data-source="regions" data-field="net_lula" data-where="name=Southeast">—</b></div><div class="row"><span>Northeast, net for Lula</span><b data-source="regions" data-field="net_lula" data-where="name=Northeast">—</b></div><p class="lc-note">Figures marked est. come from municipal-level ecological regression; the rest are counted results.</p></div>
+    </div>
+  </section>
+</div>
+<div class="lc-tip" id="lc-tip" hidden></div>
+
+<script>
+(() => {
+  const fmt = d3.format(',');
+  const compact = (v) => new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(v);
+  const signedC = (v) => `${v >= 0 ? '+' : '−'}${compact(Math.abs(v))}`;
+  const signedN = (v) => `${v >= 0 ? '+' : '−'}${fmt(Math.abs(Math.round(v)))}`;
+  const pts = (v) => `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(1)} pts`;
+  const pct = (v, d = 1) => `${v.toFixed(d)}%`;
+  const share = (v) => d3.format('.0%')(v);
+  // Resolve theme tokens to concrete colours (for interpolation and gradients).
+  const probe = document.createElement('span');
+  document.getElementById('dash-root').appendChild(probe);
+  const resolve = (c) => { probe.style.color = c; return getComputedStyle(probe).color; };
+  const tip = document.getElementById('lc-tip');
+  const showTip = (box, evt, html) => {
+    if (tip.parentElement !== box) box.appendChild(tip);
+    tip.innerHTML = html; tip.hidden = false;
+    const r = box.getBoundingClientRect();
+    let x = evt.clientX - r.left + 12; let y = evt.clientY - r.top + 12;
+    if (x + tip.offsetWidth > r.width) x = Math.max(0, evt.clientX - r.left - tip.offsetWidth - 12);
+    tip.style.left = `${x}px`; tip.style.top = `${y}px`;
+  };
+  const hideTip = () => { tip.hidden = true; };
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const fail = (el) => { el.innerHTML = '<div class="lc-fail">Failed to load</div>'; };
+
+  // Formatting for marked single values, by field.
+  const FIELD_FMT = {
+    gap1: (v) => fmt(Math.abs(v)), gap2: (v) => fmt(Math.abs(v)), turnaround: (v) => fmt(v),
+    counted2: (v) => pct(v, 2), lula_2: (v) => pct(v, 2), lula_2022: (v) => pct(v, 2), lula_2way_1: (v) => pct(v, 2),
+    turnout_change: pts, turnout1: (v) => pct(v), turnout2: (v) => pct(v), others_to_lula: share, others_voters: compact,
+    others_net_lula: signedC, net_lula: signedC, lula_gain: signedC, flavio_gain: signedC, shift: pts, vs_2022: pts,
+    others_to_lula_lo: share, others_to_lula_hi: share, pool: compact, lula_share_pool: share, bn_drop: compact,
+    extra_voters: compact, new_net_lula: signedC, munis_toward_lula: fmt, munis_n: fmt, munis_flipped: fmt,
+  };
+  const fillMarks = (id, rows) => {
+    document.querySelectorAll(`[data-source="${id}"][data-field][data-where]`).forEach((el) => {
+      const [k, v] = el.dataset.where.split('=');
+      const row = rows.find((r) => String(r[k]) === decodeURIComponent(v));
+      const f = FIELD_FMT[el.dataset.field] || ((x) => x);
+      el.textContent = row && row[el.dataset.field] != null ? f(row[el.dataset.field]) : '—';
+      el.classList.remove('dash-skeleton');
+    });
+  };
+
+  let mapMode = 'shift';
+  document.querySelectorAll('#map-mode button').forEach((b) => b.addEventListener('click', () => {
+    mapMode = b.dataset.m;
+    document.querySelectorAll('#map-mode button').forEach((x) => x.setAttribute('aria-pressed', x === b));
+    draw();
+  }));
+
+  function bridgeChart(rows) {
+    const box = document.getElementById('bridge');
+    const w = Math.max(300, box.clientWidth);
+    const lab = w < 560 ? 150 : 230;
+    const rh = 30; const h = rows.length * rh + 28;
+    const lula = resolve(dash.colors[0]); const fl = resolve(dash.colors[1]);
+    let run = 0;
+    const bars = rows.map((r) => {
+      if (r.kind === 'start') { run = r.votes; return { ...r, a: 0, b: r.votes }; }
+      if (r.kind === 'end') return { ...r, a: 0, b: r.votes };
+      const a = run; run += r.votes; return { ...r, a, b: run };
+    });
+    const ext = d3.extent(bars.flatMap((d) => [d.a, d.b, 0]));
+    const x = d3.scaleLinear(ext, [lab, w - 70]).nice();
+    const svg = d3.create('svg').attr('width', '100%').attr('viewBox', `0 0 ${w} ${h}`);
+    svg.append('line').attr('x1', x(0)).attr('x2', x(0)).attr('y1', 0).attr('y2', h - 24).style('stroke', 'var(--cds-chart-reference)');
+    for (const t of x.ticks(w < 560 ? 4 : 6)) {
+      svg.append('text').attr('x', x(t)).attr('y', h - 6).attr('text-anchor', 'middle').text(signedC(t).replace('+0', '0').replace('−0', '0'));
+    }
+    const g = svg.selectAll('g.r').data(bars).join('g').attr('transform', (d, i) => `translate(0,${i * rh})`);
+    g.append('text').attr('class', 'lbl').attr('x', lab - 8).attr('y', rh / 2).attr('dy', '0.35em').attr('text-anchor', 'end').text((d) => d.step);
+    g.append('rect').attr('x', (d) => x(Math.min(d.a, d.b))).attr('width', (d) => Math.max(2, Math.abs(x(d.b) - x(d.a))))
+      .attr('y', 6).attr('height', rh - 12).attr('rx', 4)
+      .style('fill', (d) => (d.kind !== 'step' ? (d.b >= 0 ? lula : fl) : d.votes >= 0 ? lula : fl))
+      .style('opacity', (d) => (d.kind === 'step' ? 0.85 : 1));
+    g.append('text').attr('x', (d) => x(Math.max(d.a, d.b)) + 6).attr('y', rh / 2).attr('dy', '0.35em')
+      .text((d) => (d.kind === 'step' ? signedC(d.votes) : `${d.votes >= 0 ? 'Lula' : 'Flávio'} +${compact(Math.abs(d.votes))}`));
+    g.on('mousemove', (evt, d) => showTip(box, evt, `<div class="t">${esc(d.step)}</div>${d.kind === 'step' ? `${signedN(d.votes)} votes on the Lula-minus-Flávio gap` : `${d.votes >= 0 ? 'Lula' : 'Flávio Bolsonaro'} ahead by ${fmt(Math.abs(d.votes))} votes`}`))
+      .on('mouseleave', hideTip);
+    box.replaceChildren(svg.node());
+  }
+
+  function transfersChart(rows) {
+    const box = document.getElementById('transfers');
+    const w = Math.max(300, box.clientWidth);
+    const lab = w < 560 ? 150 : 250;
+    const rh = 34; const h = rows.length * rh + 10;
+    const cols = [['to_pt', 'Lula', resolve(dash.colors[0])], ['to_pl', 'Flávio Bolsonaro', resolve(dash.colors[1])],
+      ['to_bn', 'Blank or null', resolve('var(--cds-chart-muted)')], ['to_abst', 'Did not vote', resolve('var(--color-border-line)')]];
+    const x = d3.scaleLinear([0, 1], [lab, w - 8]);
+    const svg = d3.create('svg').attr('width', '100%').attr('viewBox', `0 0 ${w} ${h}`);
+    const g = svg.selectAll('g').data(rows).join('g').attr('transform', (d, i) => `translate(0,${i * rh})`);
+    g.append('text').attr('class', 'lbl').attr('x', lab - 8).attr('y', rh / 2 - 5).attr('dy', '0.35em').attr('text-anchor', 'end').text((d) => d.group);
+    g.append('text').attr('x', lab - 8).attr('y', rh / 2 + 9).attr('dy', '0.35em').attr('text-anchor', 'end').text((d) => `${compact(d.voters)} voters`);
+    g.each(function (d) {
+      let acc = 0;
+      for (const [k, name, c] of cols) {
+        const v = d[k];
+        d3.select(this).append('rect').attr('x', x(acc) + 1).attr('width', Math.max(0, x(acc + v) - x(acc) - 2)).attr('y', 6).attr('height', rh - 12).attr('rx', 3).style('fill', c);
+        if (v >= 0.09) d3.select(this).append('text').attr('x', x(acc + v / 2)).attr('y', rh / 2).attr('dy', '0.35em').attr('text-anchor', 'middle')
+          .style('fill', k === 'to_abst' ? 'var(--color-fg)' : '#fff').text(share(v));
+        acc += v;
+      }
+    });
+    g.on('mousemove', (evt, d) => showTip(box, evt, `<div class="t">${esc(d.group)} · ${fmt(d.voters)}</div>` + cols.map(([k, name]) =>
+      `${esc(name)}: <b>${share(d[k])}</b> <span style="color:var(--cds-text-secondary)">(${share(d[`${k}_lo`])}–${share(d[`${k}_hi`])})</span>`).join('<br>')))
+      .on('mouseleave', hideTip);
+    box.replaceChildren(svg.node());
+    document.getElementById('transfers-legend').innerHTML = cols.map(([, n, c]) => `<span><i style="background:${c}"></i>${esc(n)}</span>`).join('');
+  }
+
+  function regionsChart(rows) {
+    const box = document.getElementById('regions-chart');
+    const w = Math.max(300, box.clientWidth);
+    const lab = 100; const rh = 32; const h = rows.length * rh + 26;
+    const ext = d3.extent([0, ...rows.map((r) => r.shift)]);
+    const x = d3.scaleLinear(ext, [lab, w - 70]).nice();
+    const lula = resolve(dash.colors[0]); const fl = resolve(dash.colors[1]);
+    const svg = d3.create('svg').attr('width', '100%').attr('viewBox', `0 0 ${w} ${h}`);
+    svg.append('line').attr('x1', x(0)).attr('x2', x(0)).attr('y1', 0).attr('y2', h - 22).style('stroke', 'var(--cds-chart-reference)');
+    for (const t of x.ticks(5)) svg.append('text').attr('x', x(t)).attr('y', h - 6).attr('text-anchor', 'middle').text(`${t > 0 ? '+' : ''}${t}`);
+    const g = svg.selectAll('g').data(rows).join('g').attr('transform', (d, i) => `translate(0,${i * rh})`);
+    g.append('text').attr('class', 'lbl').attr('x', lab - 8).attr('y', rh / 2).attr('dy', '0.35em').attr('text-anchor', 'end').text((d) => d.name);
+    g.append('rect').attr('x', (d) => x(Math.min(0, d.shift))).attr('width', (d) => Math.max(2, Math.abs(x(d.shift) - x(0)))).attr('y', 7).attr('height', rh - 14).attr('rx', 4)
+      .style('fill', (d) => (d.shift >= 0 ? lula : fl));
+    g.append('text').attr('x', (d) => x(Math.max(0, d.shift)) + 6).attr('y', rh / 2).attr('dy', '0.35em').text((d) => pts(d.shift));
+    g.on('mousemove', (evt, d) => showTip(box, evt, `<div class="t">${esc(d.name)}</div>Lula ${pct(d.lula_2way_1)} → ${pct(d.lula_2)}<br>Net for Lula ${signedN(d.net_lula)}<br>Turnout ${pts(d.turnout_change)}`)).on('mouseleave', hideTip);
+    box.replaceChildren(svg.node());
+  }
+
+  function table(id, rows, cells) {
+    const tb = document.querySelector(`#${id} tbody`);
+    tb.innerHTML = '';
+    for (const r of rows) {
+      const tr = document.createElement('tr');
+      for (const c of cells) { const td = document.createElement('td'); td.textContent = c(r); tr.appendChild(td); }
+      tb.appendChild(tr);
+    }
+  }
+
+  function mapChart(states, geoRows) {
+    const box = document.getElementById('map');
+    const features = geoRows.map((g) => ({ type: 'Feature', properties: { ibge: String(g.ibge) }, geometry: JSON.parse(g.geometry) }));
+    const fc = { type: 'FeatureCollection', features };
+    const w = Math.max(280, box.clientWidth); const h = Math.min(w, 460);
+    const path = d3.geoPath(d3.geoIdentity().reflectY(true).fitSize([w, h], fc));
+    const byIbge = Object.fromEntries(states.filter((s) => s.ibge).map((s) => [String(s.ibge), s]));
+    const vals = states.filter((s) => s.uf !== 'zz' && s[mapMode] != null).map((s) => Math.abs(s[mapMode])).sort(d3.ascending);
+    const top = d3.quantile(vals, 0.9) || 1;
+    const lula = resolve(dash.colors[0]); const fl = resolve(dash.colors[1]); const mid = resolve('var(--color-border-line)');
+    const col = d3.scaleLinear([-top, 0, top], [fl, mid, lula]).clamp(true);
+    const label = mapMode === 'net_lula' ? (v) => signedC(v) : (v) => `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(1)}`;
+    const svg = d3.create('svg').attr('width', '100%').attr('viewBox', `0 0 ${w} ${h}`);
+    svg.selectAll('path').data(features).join('path').attr('d', path)
+      .style('fill', (d) => { const s = byIbge[d.properties.ibge]; return s && s[mapMode] != null ? col(s[mapMode]) : 'var(--cds-chart-muted)'; })
+      .style('stroke', 'var(--color-panel)').style('stroke-width', 1)
+      .on('mousemove', (evt, d) => { const s = byIbge[d.properties.ibge]; if (s) showTip(box, evt, `<div class="t">${esc(s.name)}</div>Lula ${pct(s.lula_2way_1)} (1st, 2-way) → ${pct(s.lula_2)}<br>Shift ${pts(s.shift)} · vs 2022 ${s.vs_2022 != null ? pts(s.vs_2022) : '–'}<br>Net for Lula ${signedN(s.net_lula)} · turnout ${pts(s.turnout_change)}`); })
+      .on('mouseleave', hideTip);
+    svg.selectAll('text').data(features.filter((d) => path.area(d) > 900 && byIbge[d.properties.ibge])).join('text')
+      .attr('transform', (d) => `translate(${path.centroid(d)})`).attr('text-anchor', 'middle').attr('dy', '0.35em').attr('class', 'lbl')
+      .style('paint-order', 'stroke').style('stroke', 'var(--color-panel)').style('stroke-width', '3px').style('pointer-events', 'none')
+      .text((d) => `${byIbge[d.properties.ibge].uf.toUpperCase()} ${label(byIbge[d.properties.ibge][mapMode])}`);
+    box.replaceChildren(svg.node());
+    const titles = { shift: 'Shift toward Lula since the 1st round', vs_2022: 'Change against the 2022 runoff', net_lula: 'Net votes for Lula since the 1st round' };
+    const notes = {
+      shift: 'Change in Lula’s share of the two-candidate vote from the first round (Lula and Flávio votes only) to the runoff, in points.',
+      vs_2022: 'Lula’s runoff share now minus his share in the 2022 runoff against Jair Bolsonaro, in points.',
+      net_lula: 'Lula’s runoff votes gained since the first round minus Flávio Bolsonaro’s.',
+    };
+    document.getElementById('map-title').textContent = titles[mapMode];
+    document.getElementById('map-note').textContent = notes[mapMode];
+    const zz = states.find((s) => s.uf === 'zz');
+    document.getElementById('map-legend').innerHTML = `<span>toward Flávio <i class="ramp" style="background:linear-gradient(90deg,${fl},${mid},${lula})"></i> toward Lula</span><span>Full colour at ${mapMode === 'net_lula' ? compact(top) + ' votes' : top.toFixed(1) + ' pts'}</span>${zz && zz[mapMode] != null ? `<span>Abroad (not on map): ${label(zz[mapMode])}</span>` : ''}`;
+  }
+
+  function scatterChart(rows) {
+    const box = document.getElementById('scatter');
+    const w = Math.max(300, box.clientWidth); const h = Math.min(380, Math.max(280, w * 0.7));
+    const m = { t: 10, r: 12, b: 36, l: 44 };
+    const regions = ['North', 'Northeast', 'Centre-West', 'Southeast', 'South'];
+    const color = Object.fromEntries(regions.map((r, i) => [r, resolve(dash.colors[i + 2] || dash.colors[i])]));
+    const x = d3.scaleLinear([0, d3.quantile(rows.map((r) => r.others_share1).sort(d3.ascending), 0.995)], [m.l, w - m.r]).nice();
+    const yv = rows.map((r) => r.shift).sort(d3.ascending);
+    const y = d3.scaleLinear([d3.quantile(yv, 0.003), d3.quantile(yv, 0.997)], [h - m.b, m.t]).nice();
+    const r = d3.scaleSqrt([0, d3.max(rows, (d) => d.electorate)], [0.8, 14]);
+    const svg = d3.create('svg').attr('width', '100%').attr('viewBox', `0 0 ${w} ${h}`);
+    for (const t of y.ticks(6)) {
+      svg.append('line').attr('x1', m.l).attr('x2', w - m.r).attr('y1', y(t)).attr('y2', y(t)).style('stroke', t === 0 ? 'var(--cds-chart-reference)' : 'var(--cds-chart-grid)');
+      svg.append('text').attr('x', m.l - 6).attr('y', y(t)).attr('dy', '0.35em').attr('text-anchor', 'end').text(`${t > 0 ? '+' : ''}${t}`);
+    }
+    for (const t of x.ticks(6)) svg.append('text').attr('x', x(t)).attr('y', h - m.b + 16).attr('text-anchor', 'middle').text(`${t}%`);
+    svg.append('text').attr('x', w - m.r).attr('y', h - 4).attr('text-anchor', 'end').text('other candidates, 1st round');
+    svg.append('text').attr('x', m.l).attr('y', m.t + 2).attr('dy', '0.7em').attr('dx', 4).text('shift toward Lula, pts');
+    const inside = rows.filter((d) => d.others_share1 <= x.domain()[1] && d.shift >= y.domain()[0] && d.shift <= y.domain()[1]).sort((a, b) => b.electorate - a.electorate);
+    svg.append('g').selectAll('circle').data(inside).join('circle')
+      .attr('cx', (d) => x(d.others_share1)).attr('cy', (d) => y(d.shift)).attr('r', (d) => r(d.electorate))
+      .style('fill', (d) => color[d.region]).style('fill-opacity', 0.45).style('stroke', (d) => color[d.region]).style('stroke-opacity', 0.7).style('stroke-width', 0.5);
+    // Electorate-weighted least-squares line.
+    const W = d3.sum(rows, (d) => d.electorate);
+    const mx = d3.sum(rows, (d) => d.electorate * d.others_share1) / W;
+    const my = d3.sum(rows, (d) => d.electorate * d.shift) / W;
+    const b = d3.sum(rows, (d) => d.electorate * (d.others_share1 - mx) * (d.shift - my)) / d3.sum(rows, (d) => d.electorate * (d.others_share1 - mx) ** 2);
+    const [x0, x1] = x.domain();
+    svg.append('line').attr('x1', x(x0)).attr('y1', y(my + b * (x0 - mx))).attr('x2', x(x1)).attr('y2', y(my + b * (x1 - mx)))
+      .style('stroke', 'var(--color-fg)').style('stroke-width', 2).style('stroke-linecap', 'round');
+    const delaunay = d3.Delaunay.from(inside, (d) => x(d.others_share1), (d) => y(d.shift));
+    svg.append('rect').attr('x', m.l).attr('y', m.t).attr('width', w - m.l - m.r).attr('height', h - m.t - m.b).style('fill', 'transparent')
+      .on('mousemove', (evt) => {
+        const [px, py] = d3.pointer(evt); const d = inside[delaunay.find(px, py)];
+        if (d) showTip(box, evt, `<div class="t">${esc(d.name)} (${esc(d.uf)})</div>Other candidates ${pct(d.others_share1)}<br>Lula ${pct(d.lula_2way_1)} → ${pct(d.lula_2)} (${pts(d.shift)})<br>${fmt(d.electorate)} voters`);
+      })
+      .on('mouseleave', hideTip);
+    box.replaceChildren(svg.node());
+    document.getElementById('scatter-legend').innerHTML = regions.map((rg) => `<span><i style="background:${color[rg]}"></i>${rg}</span>`).join('') + `<span>Slope: ${b >= 0 ? '+' : '−'}${Math.abs(b).toFixed(2)} pts of shift per point of other-candidate vote</span>`;
+  }
+
+  function turnoutChart(states) {
+    const box = document.getElementById('turnout');
+    const rows = states.filter((s) => s.uf !== 'zz');
+    const w = Math.max(300, box.clientWidth); const h = Math.min(360, Math.max(280, w * 0.7));
+    const m = { t: 10, r: 14, b: 36, l: 44 };
+    const x = d3.scaleLinear(d3.extent(rows, (d) => d.turnout_change), [m.l, w - m.r]).nice();
+    const y = d3.scaleLinear(d3.extent([0, ...rows.map((d) => d.shift)]), [h - m.b, m.t]).nice();
+    const r = d3.scaleSqrt([0, d3.max(rows, (d) => d.electorate)], [3, 22]);
+    const lula = resolve(dash.colors[0]);
+    const svg = d3.create('svg').attr('width', '100%').attr('viewBox', `0 0 ${w} ${h}`);
+    for (const t of y.ticks(5)) {
+      svg.append('line').attr('x1', m.l).attr('x2', w - m.r).attr('y1', y(t)).attr('y2', y(t)).style('stroke', t === 0 ? 'var(--cds-chart-reference)' : 'var(--cds-chart-grid)');
+      svg.append('text').attr('x', m.l - 6).attr('y', y(t)).attr('dy', '0.35em').attr('text-anchor', 'end').text(`${t > 0 ? '+' : ''}${t}`);
+    }
+    for (const t of x.ticks(5)) svg.append('text').attr('x', x(t)).attr('y', h - m.b + 16).attr('text-anchor', 'middle').text(`${t > 0 ? '+' : ''}${t}`);
+    svg.append('text').attr('x', w - m.r).attr('y', h - 4).attr('text-anchor', 'end').text('turnout change, pts');
+    svg.append('text').attr('x', m.l).attr('y', m.t + 2).attr('dy', '0.7em').attr('dx', 4).text('shift toward Lula, pts');
+    const g = svg.selectAll('g.s').data(rows.sort((a, b) => b.electorate - a.electorate)).join('g');
+    g.append('circle').attr('cx', (d) => x(d.turnout_change)).attr('cy', (d) => y(d.shift)).attr('r', (d) => r(d.electorate))
+      .style('fill', lula).style('fill-opacity', 0.35).style('stroke', lula).style('stroke-width', 1);
+    g.append('text').attr('class', 'lbl').attr('x', (d) => x(d.turnout_change)).attr('y', (d) => y(d.shift)).attr('dy', '0.35em').attr('text-anchor', 'middle')
+      .style('pointer-events', 'none').text((d) => (r(d.electorate) > 9 ? d.uf.toUpperCase() : ''));
+    g.on('mousemove', (evt, d) => showTip(box, evt, `<div class="t">${esc(d.name)}</div>Turnout ${pct(d.turnout1)} → ${pct(d.turnout2)} (${pts(d.turnout_change)})<br>Shift toward Lula ${pts(d.shift)}`)).on('mouseleave', hideTip);
+    box.replaceChildren(svg.node());
+  }
+
+  function draw() {
+    const nat = dash.data('national'); const br = dash.data('bridge'); const tr = dash.data('transfers');
+    const rg = dash.data('regions'); const st = dash.data('states'); const mu = dash.data('municipalities'); const geo = dash.data('br_states');
+    if (nat.status === 'ok') fillMarks('national', nat.data);
+    if (rg.status === 'ok') fillMarks('regions', rg.data);
+    if (st.status === 'ok') fillMarks('states', st.data);
+    if (tr.status === 'ok') fillMarks('transfers', tr.data);
+    if (br.status === 'ok') bridgeChart(br.data); else if (br.status === 'error') fail(document.getElementById('bridge'));
+    if (tr.status === 'ok') transfersChart(tr.data); else if (tr.status === 'error') fail(document.getElementById('transfers'));
+    if (rg.status === 'ok') {
+      regionsChart(rg.data);
+      table('regions-table', rg.data, [(r) => r.name, (r) => pct(r.lula_2way_1), (r) => pct(r.lula_2), (r) => signedC(r.lula_gain), (r) => signedC(r.flavio_gain), (r) => signedC(r.net_lula), (r) => pts(r.turnout_change), (r) => (r.others_to_lula != null ? share(r.others_to_lula) : '–')]);
+    } else if (rg.status === 'error') fail(document.getElementById('regions-chart'));
+    if (st.status === 'ok') {
+      const sorted = [...st.data].sort((a, b) => b.shift - a.shift);
+      table('states-table', sorted, [(r) => r.name, (r) => pct(r.lula_2way_1), (r) => pct(r.lula_2), (r) => pts(r.shift), (r) => (r.vs_2022 != null ? pts(r.vs_2022) : '–'), (r) => signedC(r.net_lula), (r) => pts(r.turnout_change)]);
+      turnoutChart(st.data);
+      if (geo.status === 'ok') mapChart(st.data, geo.data);
+    } else if (st.status === 'error') fail(document.getElementById('map'));
+    if (geo.status === 'error') fail(document.getElementById('map'));
+    if (mu.status === 'ok') scatterChart(mu.data); else if (mu.status === 'error') fail(document.getElementById('scatter'));
+  }
+  dash.onData(draw);
+})();
+</script>

@@ -35,16 +35,28 @@ window.Backend = __mods.core.createCore({
 });
 })();
 `;
-fs.writeFileSync(path.join(out, 'backend.js'), js);
 const html = path.join(out, 'index.html');
-fs.writeFileSync(html, fs.readFileSync(html, 'utf8').replace('<script src="app.js"></script>', '<script src="backend.js"></script>\n<script src="app.js"></script>'));
+// Once data/final.json exists the site is frozen: it serves that snapshot and no longer calls TSE or Urna Aberta.
+const FINAL = fs.existsSync(path.join(root, 'data', 'final.json'));
+if (FINAL) {
+  fs.copyFileSync(path.join(root, 'data', 'final.json'), path.join(out, 'data', 'final.json'));
+  const page = fs.readFileSync(html, 'utf8')
+    .replace('<script src="app.js"></script>', '<script>window.DASH = { final: true };</script>\n<script src="app.js"></script>')
+    .replace(/<p class="foot">[\s\S]*?<\/p>/, '<p class="foot">Final results as published by TSE (resultados.tse.jus.br). The count is complete and this page no longer updates. 2026 presidential count history: urnaaberta.com.br and this site\'s own snapshots. 2022 curves and results by area: TSE open data. First-round comparisons count only PL and PT votes.</p>');
+  fs.writeFileSync(html, page);
+} else {
+  fs.writeFileSync(path.join(out, 'backend.js'), js);
+  fs.writeFileSync(html, fs.readFileSync(html, 'utf8').replace('<script src="app.js"></script>', '<script src="backend.js"></script>\n<script src="app.js"></script>'));
+}
 
 // President-only page for the 25 October runoff, sharing every asset with the main page.
 const runoff = fs.readFileSync(html, 'utf8')
   .replace('<head>', '<head>\n<base href="../">')
   .replace(/<title>.*?<\/title>/, '<title>Brazil 2026 Presidential Runoff</title>')
   .replace('<h1>Brazil 2026 · live count</h1>', '<h1>Brazil 2026 · presidential runoff</h1>')
-  .replace('<script src="backend.js"></script>', '<script>window.DASH = { races: [\'president\'], round: 2, manual: true, subStates: [\'sp\', \'mg\'] };</script>\n<script src="backend.js"></script>');
+  .replace(FINAL ? '<script>window.DASH = { final: true };</script>' : '<script src="backend.js"></script>',
+    FINAL ? '<script>window.DASH = { races: [\'president\'], round: 2, final: true, subStates: [\'sp\', \'mg\'] };</script>'
+      : '<script>window.DASH = { races: [\'president\'], round: 2, manual: true, subStates: [\'sp\', \'mg\'] };</script>\n<script src="backend.js"></script>');
 fs.mkdirSync(path.join(out, 'runoff'), { recursive: true });
 fs.writeFileSync(path.join(out, 'runoff', 'index.html'), runoff);
 console.log('built docs/', fs.readdirSync(out));
